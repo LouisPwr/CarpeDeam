@@ -1,0 +1,13 @@
+set(assembler_source_files
+        assembler/assembleresult.cpp
+        assembler/nuclassembleresult1.cpp
+        assembler/nuclassembleresult2.cpp
+        assembler/correction.cpp
+        assembler/guidedassembleresult.cpp
+        assembler/findassemblystart.cpp
+        assembler/filternoncoding.cpp
+        assembler/mergereads.cpp
+        assembler/cyclecheck.cpp
+        assembler/nuclassembleUtil.cpp
+        PARENT_SCOPE
+        )
