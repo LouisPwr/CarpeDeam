@@ -10,5 +10,6 @@ add_subdirectory(data)
 include_directories(lib)
 add_subdirectory(lib/kerasify)
 add_subdirectory(lib/flash)
+#add_subdirectory(lib/libgab)
 
 add_subdirectory(src)
