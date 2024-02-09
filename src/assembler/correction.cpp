@@ -166,7 +166,7 @@ int doCorrection(LocalParameters &par) {
         diNucleotideProb seqErrMatch;
         diNucleotideProb seqErrMis;
 
-        long double seqErrCorrection= 0.001;
+        long double seqErrCorrection= 0.01;
         getSeqErrorProf(seqErrMatch, seqErrMis, seqErrCorrection);
 
         float rymerThresh = par.correctionThreshold;
@@ -286,7 +286,7 @@ int doCorrection(LocalParameters &par) {
                 //std::cerr << "RySeqId:\t" << target.rySeqId;
                 //std::cerr << "\n" << std::endl;
 
-                if ( targetWasExt == false && isNotIdentity && target.rySeqId >= rymerThresh && target.alnLength >= 20 ){
+                if ( targetWasExt == false && isNotIdentity && target.rySeqId >= rymerThresh && target.alnLength >= 15 ){
 
                     //std::cerr << ">" << target.dbKey << std::endl;
                     //std::cerr << tSeq; 

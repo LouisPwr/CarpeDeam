@@ -123,11 +123,11 @@ public:
 
     static size_t computeRYmerIdx(const unsigned char *kmer, size_t kmerSize) {
         uint64_t kmerIdx = 0;
-        int rymer[4] = {3, 1, 1, 3};
+        //int rymer[4] = {3, 1, 1, 3};
 		for(size_t kmerPos = 0; kmerPos < kmerSize; kmerPos++){
             kmerIdx = kmerIdx << 2;
-            //kmerIdx = kmerIdx | kmer[kmerPos];
-			kmerIdx = kmerIdx | rymer[kmer[kmerPos]];
+            kmerIdx = kmerIdx | kmer[kmerPos];
+			//kmerIdx = kmerIdx | rymer[kmer[kmerPos]];
         }
         return kmerIdx;
     }

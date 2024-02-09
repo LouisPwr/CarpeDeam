@@ -148,7 +148,6 @@ while [ $STEP -lt $NUM_IT ]; do
 #        PREV_ALN_CORR="${TMP_PATH}/aln_corr_${STEP}"
 #    fi
 
-
     # 3. Assemble only with reads
     if notExists "${TMP_PATH}/assembly_reads_${STEP}.done"; then
         # shellcheck disable=SC2086
@@ -164,7 +163,7 @@ while [ $STEP -lt $NUM_IT ]; do
     # 4. Finding exact $k$-mer matches.
     if notExists "${TMP_PATH}/pref_asm_${STEP}.done"; then
         # shellcheck disable=SC2086
-        if [ $STEP -lt 6 ]; then 
+        if [ $STEP -lt 3 ]; then 
             "$MMSEQS" kmermatcher "${TMP_PATH}/assembly_reads_${STEP}" "${TMP_PATH}/pref_asm_${STEP}" ${KMERMATCHER_PAR} \
             || fail "Kmer matching step died"
         else

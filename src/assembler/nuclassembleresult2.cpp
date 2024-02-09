@@ -51,6 +51,10 @@ public:
             return true;
         if (r1.dbLen - r1.alnLength > r2.dbLen - r2.alnLength)
             return false;
+        // if (r1.dbLen < r2.dbLen)
+        //     return true;
+        // if (r1.dbLen > r2.dbLen)
+        //     return false;
 
         return true;
 
@@ -153,7 +157,7 @@ int doNuclAssembly2(LocalParameters &par) {
         diNucleotideProb seqErrMatch;
         diNucleotideProb seqErrMis;
 
-        long double seqErrCorrection= 0.001;
+        long double seqErrCorrection= 0.01;
         getSeqErrorProf(seqErrMatch, seqErrMis, seqErrCorrection);
 
 #pragma omp for schedule(dynamic, 100)
@@ -176,11 +180,11 @@ int doNuclAssembly2(LocalParameters &par) {
             std::vector<Matcher::result_t> contigs;
 
             for (size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
-                //unsigned int targetId = sequenceDbr->getId(alignments[alnIdx].dbKey);
-                //bool isContig = sequenceDbr->getExtData(targetId);
-                //if ( isContig == true ){
+                unsigned int targetId = sequenceDbr->getId(alignments[alnIdx].dbKey);
+                bool isContig = sequenceDbr->getExtData(targetId);
+                if ( isContig == true ){
                     contigs.push_back(alignments[alnIdx]);
-                //}
+                }
             }
 
             // fill queue
@@ -373,7 +377,7 @@ int doNuclAssembly2(LocalParameters &par) {
 
                     // refill queue
                     //if(tmpAlignments[alnIdx].seqId >= par.mergeSeqIdThr && tmpAlignments[alnIdx].rySeqId >= par.rySeqIdThr){
-                    if(tmpAlignments[alnIdx].seqId >= 0.97 && tmpAlignments[alnIdx].rySeqId >= par.rySeqIdThr){ 
+                    if(tmpAlignments[alnIdx].seqId >= par.mergeSeqIdThr && tmpAlignments[alnIdx].rySeqId >= par.rySeqIdThr){ 
                         std::vector<diNucleotideProb> subDeamDiNucRef = tmpAlignments[alnIdx].isRevToAlignment ? subDeamDiNucRev : subDeamDiNuc;
                         float ancientMatches = ancientMatchCount(tmpAlignments[alnIdx], querySeq, tSeq, subDeamDiNucRef, nucleotideMap);
                         tmpAlignments[alnIdx].deamMatch = ancientMatches;

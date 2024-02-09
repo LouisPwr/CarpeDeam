@@ -172,7 +172,7 @@ int doNuclAssembly1(LocalParameters &par) {
         diNucleotideProb seqErrMatch;
         diNucleotideProb seqErrMis;
 
-        long double seqErrCorrection= 0.001;
+        long double seqErrCorrection= 0.01;
         getSeqErrorProf(seqErrMatch, seqErrMis, seqErrCorrection);
 
         float randAlnPenal = par.randomAlignPenal;
@@ -316,7 +316,7 @@ int doNuclAssembly1(LocalParameters &par) {
                 {
                     //std::cerr << "a" << std::endl;
                     scorePerRes toAdd = r_s_pair(notContig[alnIdx], querySeq, targetSeq, subDeamDiNuc, subDeamDiNucRev, maxAlnLeft, maxAlnRight, randAlnPenal, seqErrMatch, seqErrMis);
-                    if ( toAdd.sRatio > 0.7 ) {
+                    if ( toAdd.sRatio > 0.5 ) {
                         alnQueueReads.push( toAdd );
                     }
                 }

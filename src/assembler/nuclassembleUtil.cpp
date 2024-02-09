@@ -97,15 +97,16 @@ double deamMatches(Matcher::result_t res, unsigned int scoreAln, double matchLik
 
     // Posterior:   p(match|C->T,d)
     // Likelihood:  p(C->T|match,d) = "from error profile"
-    //              p(C->T|no match,d) = 1,5*(1-p(match,d))
-    // Prior:       p(match) = ((score/ssingle_match)+0.9)/(L+1))
+    //              p(C->T|no match,d) = 5*(1-p(match,d))
+    // Prior:       p(match) = ((score/ssingle_match)+0.9)/(L+1))*0.9
 
     //double pMatch = ( (static_cast<float>(scoreAln)/float(2) ) + 0.9)/(res.alnLength + 1);
     double pMatch = ((((static_cast<float>(scoreAln) + 3.0f * res.alnLength) / 5.0f) + 0.9f) / (res.alnLength + 1)) * 0.9;
 
-    double LikNoMatch = std::min(1.5*(1-pMatch), 0.2);
+    double LikNoMatch = std::min(5*(1-pMatch), 0.25);
     double oddsRatio = LikNoMatch/matchLik;
     double odds = (1-pMatch)/pMatch;
+    //double odds = (0.5)/pMatch;
     double posterior = 1 / (1 + oddsRatio * odds);
     // double posterior = pow((1 + (LikNoMatch/matchLik)*((1-pMatch)/pMatch)),-1);
 
