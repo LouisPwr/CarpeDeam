@@ -43,18 +43,28 @@ public:
         }
         //p *= c;
 
+        unsigned int extLenR1 = (r1.dbLen - r1.alnLength);
+        unsigned int extLenR2 = (r2.dbLen - r2.alnLength);
+        unsigned int maxExtLen = (extLenR1 > extLenR2) ? extLenR1 : extLenR2;
+
+        double extRatioR1 = static_cast<double>(extLenR1) / static_cast<double>(maxExtLen);
+        double extRatioR2 = static_cast<double>(extLenR2) / static_cast<double>(maxExtLen);
+
+        double wIdentR1 = (0.495 * r1.seqId + 0.495 * r1.rySeqId + 0.01 * extRatioR1);
+        double wIdentR2 = (0.495 * r2.seqId + 0.495 * r2.rySeqId + 0.01 * extRatioR2); 
+
         if (p < 0.45)
             return true;
         if (p  > 0.55)
             return false;
-        if (r1.dbLen - r1.alnLength < r2.dbLen - r2.alnLength)
-            return true;
-        if (r1.dbLen - r1.alnLength > r2.dbLen - r2.alnLength)
-            return false;
-        // if (r1.dbLen < r2.dbLen)
-        //     return true;
-        // if (r1.dbLen > r2.dbLen)
-        //     return false;
+        //if (r1.dbLen - r1.alnLength < r2.dbLen - r2.alnLength)
+        //    return true;
+        //if (r1.dbLen - r1.alnLength > r2.dbLen - r2.alnLength)
+        //    return false;
+        if (wIdentR1 < wIdentR2)
+             return true;
+        if (wIdentR2 > wIdentR1)
+             return false;
 
         return true;
 

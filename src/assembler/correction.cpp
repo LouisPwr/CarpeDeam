@@ -353,7 +353,13 @@ int doCorrection(LocalParameters &par) {
                     corrQuery[qPos] = querySeq[qPos];
                 }
                 else {
-                    int newBase = mostLikeliBaseRead(qPos, seqErrMatch, seqErrMis, deamVec, revCount, subDeamDiNuc, subDeamDiNucRev);
+                    int newBase = qBase;
+                    int newBaseCandidate = mostLikeliBaseRead(qPos, seqErrMatch, seqErrMis, deamVec, revCount, subDeamDiNuc, subDeamDiNucRev);
+                    if ((qBase == 3 && (newBaseCandidate == 1 || newBaseCandidate == 3)) ||
+                        (qBase == 0 && (newBaseCandidate == 0 || newBaseCandidate == 2))) {
+                        newBase = newBaseCandidate;
+                    }
+
                     corrQuery[qPos] = "ACGT"[newBase];
                     // if ( newBase != qBase )
                     // {

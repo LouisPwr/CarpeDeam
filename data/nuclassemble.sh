@@ -97,110 +97,128 @@ fi
 while [ $STEP -lt $NUM_IT ]; do
     echo "STEP: $STEP"
 
-    # 1. Finding exact $k$-mer matches.
-    if notExists "${TMP_PATH}/pref_${STEP}.done"; then
-        # shellcheck disable=SC2086
-        "$MMSEQS" kmermatcher "$INPUT" "${TMP_PATH}/pref_${STEP}" ${KMERMATCHER_PAR} \
-            || fail "Kmer matching step died"
-        deleteIncremental "$PREV_KMER_PREF"
-        touch "${TMP_PATH}/pref_${STEP}.done"
-        PREV_KMER_PREF="${TMP_PATH}/pref_${STEP}"
-    fi
+    if [ $STEP -lt 5 ]; then
 
-    # 2. Ungapped alignment
-    if notExists "${TMP_PATH}/aln_${STEP}.done"; then
-        # shellcheck disable=SC2086
-        "$MMSEQS" rescorediagonal "$INPUT" "$INPUT" "${TMP_PATH}/pref_${STEP}" "${TMP_PATH}/aln_${STEP}" ${UNGAPPED_ALN_PAR} \
-            || fail "Ungapped alignment step died"
-        touch "${TMP_PATH}/aln_${STEP}.done"
-        deleteIncremental "$PREV_ALN"
-        PREV_ALN="${TMP_PATH}/aln_${STEP}"
-    fi
+        # 1. Finding exact $k$-mer matches.
+        if notExists "${TMP_PATH}/pref_${STEP}.done"; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" kmermatcher "$INPUT" "${TMP_PATH}/pref_${STEP}" ${KMERMATCHER_PAR} \
+                || fail "Kmer matching step died"
+            deleteIncremental "$PREV_KMER_PREF"
+            touch "${TMP_PATH}/pref_${STEP}.done"
+            PREV_KMER_PREF="${TMP_PATH}/pref_${STEP}"
+        fi
 
-    # Louis was here
-    # 2.5 Deamination correction
-    if notExists "${TMP_PATH}/correction.done"; then
-        # shellcheck disable=SC2086
-        "$MMSEQS" corrections "$INPUT" "${TMP_PATH}/aln_${STEP}" "${TMP_PATH}/correction_${STEP}" ${ASSEMBLE_RESULT_PAR} \
-            || fail "corrections died"
-        touch "${TMP_PATH}/correction_${STEP}.done"
-        deleteIncremental "$PREV_CORR"
-        PREV_CORR="${TMP_PATH}/correction_${STEP}"
-    fi
+        # 2. Ungapped alignment
+        if notExists "${TMP_PATH}/aln_${STEP}.done"; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" rescorediagonal "$INPUT" "$INPUT" "${TMP_PATH}/pref_${STEP}" "${TMP_PATH}/aln_${STEP}" ${UNGAPPED_ALN_PAR} \
+                || fail "Ungapped alignment step died"
+            touch "${TMP_PATH}/aln_${STEP}.done"
+            deleteIncremental "$PREV_ALN"
+            PREV_ALN="${TMP_PATH}/aln_${STEP}"
+        fi
 
-#    # 2.6 Finding exact $k$-mer matches AGAIN
-#    if notExists "${TMP_PATH}/pref_corr_${STEP}.done"; then
-#        # shellcheck disable=SC2086
-#        "$MMSEQS" kmermatcher "${TMP_PATH}/correction_${STEP}" "${TMP_PATH}/pref_corr_${STEP}" ${KMERMATCHER_PAR} \
-#            || fail "Kmer matching step died"
-#        deleteIncremental "$PREV_KMER_PREF_CORR"
-#        touch "${TMP_PATH}/pref_corr_${STEP}.done"
-#        PREV_KMER_PREF_CORR="${TMP_PATH}/pref_corr_${STEP}"
-#    fi
-#
-#    # 2.7 Ungapped alignment AGAIN
-#    if notExists "${TMP_PATH}/aln_corr_${STEP}.done"; then
-#        # shellcheck disable=SC2086
-#        "$MMSEQS" rescorediagonal "${TMP_PATH}/correction_${STEP}" "${TMP_PATH}/correction_${STEP}" "${TMP_PATH}/pref_corr_${STEP}" "${TMP_PATH}/aln_corr_${STEP}" ${UNGAPPED_ALN_PAR} \
-#            || fail "Ungapped alignment step died"
-#        touch "${TMP_PATH}/aln_corr_${STEP}.done"
-#        deleteIncremental "$PREV_ALN_CORR"
-#        PREV_ALN_CORR="${TMP_PATH}/aln_corr_${STEP}"
-#    fi
+        # Louis was here
+        # 2.5 Deamination correction
+        if notExists "${TMP_PATH}/correction.done"; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" corrections "$INPUT" "${TMP_PATH}/aln_${STEP}" "${TMP_PATH}/correction_${STEP}" ${ASSEMBLE_RESULT_PAR} \
+                || fail "corrections died"
+            touch "${TMP_PATH}/correction_${STEP}.done"
+            deleteIncremental "$PREV_CORR"
+            PREV_CORR="${TMP_PATH}/correction_${STEP}"
+        fi
 
-    # 3. Assemble only with reads
-    if notExists "${TMP_PATH}/assembly_reads_${STEP}.done"; then
-        # shellcheck disable=SC2086
-        "$MMSEQS" nuclassembleresults1 "${TMP_PATH}/correction_${STEP}" "${TMP_PATH}/aln_${STEP}" "${TMP_PATH}/assembly_reads_${STEP}" ${ASSEMBLE_RESULT_PAR} \
-            || fail "Assembly step died"
-        touch "${TMP_PATH}/assembly_reads_${STEP}.done"
-        deleteIncremental "$PREV_ASSEMBLY_READS"
-        deleteIncremental "$PREV_ASSEMBLY_READS_STEP"
-        PREV_ASSEMBLY_READS="${TMP_PATH}/assembly_reads_${STEP}"
-        PREV_ASSEMBLY_READS_STEP="${TMP_PATH}/assembly_reads_${STEP}"
-    fi
+        # 3. Assemble only with reads
+        if notExists "${TMP_PATH}/assembly_reads_${STEP}.done"; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" nuclassembleresults1 "${TMP_PATH}/correction_${STEP}" "${TMP_PATH}/aln_${STEP}" "${TMP_PATH}/assembly_reads_${STEP}" ${ASSEMBLE_RESULT_PAR} \
+                || fail "Assembly step died"
+            touch "${TMP_PATH}/assembly_reads_${STEP}.done"
+            deleteIncremental "$PREV_ASSEMBLY_READS"
+            deleteIncremental "$PREV_ASSEMBLY_READS_STEP"
+            PREV_ASSEMBLY_READS="${TMP_PATH}/assembly_reads_${STEP}"
+            PREV_ASSEMBLY_READS_STEP="${TMP_PATH}/assembly_reads_${STEP}"
+        fi
 
-    # 4. Finding exact $k$-mer matches.
-    if notExists "${TMP_PATH}/pref_asm_${STEP}.done"; then
-        # shellcheck disable=SC2086
-        if [ $STEP -lt 3 ]; then 
-            "$MMSEQS" kmermatcher "${TMP_PATH}/assembly_reads_${STEP}" "${TMP_PATH}/pref_asm_${STEP}" ${KMERMATCHER_PAR} \
-            || fail "Kmer matching step died"
-        else
+        # 4. Finding exact $k$-mer matches.
+        if notExists "${TMP_PATH}/pref_asm_${STEP}.done"; then
+            # shellcheck disable=SC2086
             "$MMSEQS" rymermatcher "${TMP_PATH}/assembly_reads_${STEP}" "${TMP_PATH}/pref_asm_${STEP}" ${KMERMATCHER_PAR} \
             || fail "Kmer matching step died"
+            deleteIncremental "$PREV_KMER_ASM_PREF"
+            touch "${TMP_PATH}/pref_asm_${STEP}.done"
+            PREV_KMER_ASM_PREF="${TMP_PATH}/pref_asm_${STEP}"
         fi
-        deleteIncremental "$PREV_KMER_ASM_PREF"
-        touch "${TMP_PATH}/pref_asm_${STEP}.done"
-        PREV_KMER_ASM_PREF="${TMP_PATH}/pref_asm_${STEP}"
+
+        # 5. Ungapped alignment
+        if notExists "${TMP_PATH}/aln_asm_${STEP}.done"; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" rescorediagonal "${TMP_PATH}/assembly_reads_${STEP}" "${TMP_PATH}/assembly_reads_${STEP}" "${TMP_PATH}/pref_asm_${STEP}" "${TMP_PATH}/aln_asm_${STEP}" ${UNGAPPED_ALN_PAR} \
+                || fail "Ungapped alignment step died"
+            touch "${TMP_PATH}/aln_asm_${STEP}.done"
+            deleteIncremental "$PREV_ALN_ASM"
+            PREV_ALN_ASM="${TMP_PATH}/aln_asm_${STEP}"
+        fi
+
+        # 6. Assemble only with contigs
+        if notExists "${TMP_PATH}/assembly_contigs_${STEP}.done"; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" nuclassembleresults2 "${TMP_PATH}/assembly_reads_${STEP}" "${TMP_PATH}/aln_asm_${STEP}" "${TMP_PATH}/assembly_contigs_${STEP}" ${ASSEMBLE_RESULT_PAR} \
+                || fail "Assembly step died"
+            touch "${TMP_PATH}/assembly_contigs_${STEP}.done"
+            deleteIncremental "$PREV_CONTIG_ASSEMBLY"
+            deleteIncremental "$PREV_CONTIG_ASSEMBLY_STEP"
+        fi
+
+        PREV_CONTIG_ASSEMBLY="${TMP_PATH}/assembly_contigs_${STEP}"
+        PREV_CONTIG_ASSEMBLY_STEP="${TMP_PATH}/assembly_contigs_${STEP}"
+        cyclecheck "${PREV_CONTIG_ASSEMBLY}"
+
+        INPUT="${PREV_CONTIG_ASSEMBLY}"
+        STEP="$((STEP+1))"
+
+    else
+
+        # 1. Finding exact $k$-mer matches.
+        if notExists "${TMP_PATH}/pref_asm_${STEP}.done"; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" rymermatcher "$INPUT" "${TMP_PATH}/pref_asm_${STEP}" ${KMERMATCHER_PAR} \
+            || fail "Kmer matching step died"
+            deleteIncremental "$PREV_KMER_ASM_PREF"
+            touch "${TMP_PATH}/pref_asm_${STEP}.done"
+            PREV_KMER_ASM_PREF="${TMP_PATH}/pref_asm_${STEP}"
+        fi
+
+        # 5. Ungapped alignment
+        if notExists "${TMP_PATH}/aln_asm_${STEP}.done"; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" rescorediagonal "$INPUT" "$INPUT" "${TMP_PATH}/pref_asm_${STEP}" "${TMP_PATH}/aln_asm_${STEP}" ${UNGAPPED_ALN_PAR} \
+                || fail "Ungapped alignment step died"
+            touch "${TMP_PATH}/aln_asm_${STEP}.done"
+            deleteIncremental "$PREV_ALN_ASM"
+            PREV_ALN_ASM="${TMP_PATH}/aln_asm_${STEP}"
+        fi
+
+        # 6. Assemble only with contigs
+        if notExists "${TMP_PATH}/assembly_contigs_${STEP}.done"; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" nuclassembleresults2 "$INPUT" "${TMP_PATH}/aln_asm_${STEP}" "${TMP_PATH}/assembly_contigs_${STEP}" ${ASSEMBLE_RESULT_PAR} \
+                || fail "Assembly step died"
+            touch "${TMP_PATH}/assembly_contigs_${STEP}.done"
+            deleteIncremental "$PREV_CONTIG_ASSEMBLY"
+            deleteIncremental "$PREV_CONTIG_ASSEMBLY_STEP"
+        fi
+
+        PREV_CONTIG_ASSEMBLY="${TMP_PATH}/assembly_contigs_${STEP}"
+        PREV_CONTIG_ASSEMBLY_STEP="${TMP_PATH}/assembly_contigs_${STEP}"
+        cyclecheck "${PREV_CONTIG_ASSEMBLY}"
+
+        INPUT="${PREV_CONTIG_ASSEMBLY}"
+        STEP="$((STEP+1))"
+
     fi
-
-    # 5. Ungapped alignment
-    if notExists "${TMP_PATH}/aln_asm_${STEP}.done"; then
-        # shellcheck disable=SC2086
-        "$MMSEQS" rescorediagonal "${TMP_PATH}/assembly_reads_${STEP}" "${TMP_PATH}/assembly_reads_${STEP}" "${TMP_PATH}/pref_asm_${STEP}" "${TMP_PATH}/aln_asm_${STEP}" ${UNGAPPED_ALN_PAR} \
-            || fail "Ungapped alignment step died"
-        touch "${TMP_PATH}/aln_asm_${STEP}.done"
-        deleteIncremental "$PREV_ALN_ASM"
-        PREV_ALN_ASM="${TMP_PATH}/aln_asm_${STEP}"
-    fi
-
-    # 6. Assemble only with contigs
-    if notExists "${TMP_PATH}/assembly_contigs_${STEP}.done"; then
-        # shellcheck disable=SC2086
-        "$MMSEQS" nuclassembleresults2 "${TMP_PATH}/assembly_reads_${STEP}" "${TMP_PATH}/aln_asm_${STEP}" "${TMP_PATH}/assembly_contigs_${STEP}" ${ASSEMBLE_RESULT_PAR} \
-            || fail "Assembly step died"
-        touch "${TMP_PATH}/assembly_contigs_${STEP}.done"
-        deleteIncremental "$PREV_CONTIG_ASSEMBLY"
-        deleteIncremental "$PREV_CONTIG_ASSEMBLY_STEP"
-    fi
-
-    PREV_CONTIG_ASSEMBLY="${TMP_PATH}/assembly_contigs_${STEP}"
-    PREV_CONTIG_ASSEMBLY_STEP="${TMP_PATH}/assembly_contigs_${STEP}"
-    cyclecheck "${PREV_CONTIG_ASSEMBLY}"
-
-    INPUT="${PREV_CONTIG_ASSEMBLY}"
-    STEP="$((STEP+1))"
 
     done
     STEP="$((STEP-1))"

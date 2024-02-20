@@ -316,7 +316,7 @@ int doNuclAssembly1(LocalParameters &par) {
                 {
                     //std::cerr << "a" << std::endl;
                     scorePerRes toAdd = r_s_pair(notContig[alnIdx], querySeq, targetSeq, subDeamDiNuc, subDeamDiNucRev, maxAlnLeft, maxAlnRight, randAlnPenal, seqErrMatch, seqErrMis);
-                    if ( toAdd.sRatio > 0.5 ) {
+                    if ( toAdd.sRatio > 0.95 ) {
                         alnQueueReads.push( toAdd );
                     }
                 }
@@ -520,7 +520,7 @@ int doNuclAssembly1(LocalParameters &par) {
                             }
 
                             scorePerRes toAdd = r_s_pair(tmpAlignmentsReads[alnIdx], querySeq, tSeq, subDeamDiNuc, subDeamDiNucRev, maxAlnLeft, maxAlnRight, randAlnPenal, seqErrMatch, seqErrMis);
-                            if ( toAdd.sRatio > 0.5 ) {
+                            if ( toAdd.sRatio > 0.95 ) {
                                 alnQueueReads.push( toAdd );
                             }
                             if (deleteTargetSeq) {
