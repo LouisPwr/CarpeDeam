@@ -91,36 +91,41 @@ float getRYSeqId(Matcher::result_t & res, char* querySeq,  char* targetSeq, std:
 }
 
 
-
 // calculate number of matches/mismatches for adapted bayesian extension in nuclassembleresult2.cpp
 double deamMatches(Matcher::result_t res, unsigned int scoreAln, double matchLik){
 
     // Posterior:   p(match|C->T,d)
     // Likelihood:  p(C->T|match,d) = "from error profile"
     //              p(C->T|no match,d) = 5*(1-p(match,d))
-    // Prior:       p(match) = ((score/ssingle_match)+0.9)/(L+1))*0.9
+    // Prior:       p(match) = 0.5 * ((score/ssingle_match)+0.9)/(L+1)) + 0.5 * alignment bias
 
-    //double pMatch = ( (static_cast<float>(scoreAln)/float(2) ) + 0.9)/(res.alnLength + 1);
-    double pMatch = ((((static_cast<float>(scoreAln) + 3.0f * res.alnLength) / 5.0f) + 0.9f) / (res.alnLength + 1)) * 0.9;
+    const double logAdjustmentConstant = std::log(1.4e-9);
+    unsigned int maxLength = 1e5;
 
-    double LikNoMatch = std::min(5*(1-pMatch), 0.25);
+    // Helper lambda to compute log power adjustment
+    auto logPower = [logAdjustmentConstant](unsigned int length) {
+        return logAdjustmentConstant - 3.0 * std::log(length);
+    };
+
+    // Calculate log-adjustments at the boundaries
+    double logMin = logPower(10); // Using max_length for min adjustment due to inversion
+    double logMax = logPower(maxLength); // Using min_length for max adjustment due to inversion
+
+    // Length calculation
+    double logLength = logPower(std::min(res.alnLength, maxLength));
+    double fractionLength = ( static_cast<double>(std::abs(logLength) - std::abs(logMax)) ) / static_cast<double>((std::abs(logMin) - std::abs(logMax)) );
+    double priorAln = 1 - fractionLength;
+
+    double pMatch = 0.5f * ((((static_cast<double>(scoreAln) + 3.0f * res.alnLength) / 5.0f) + 0.9f) / (res.alnLength + 1)) + 0.5f * priorAln;
+    //double pMatch = ((((static_cast<float>(scoreAln) + 3.0f * res.alnLength) / 5.0f) + 0.9f) / (res.alnLength + 1)) * 0.9;
+
+    double LikNoMatch = 1-pMatch;
+    //double LikNoMatch = std::min(5*(1-pMatch), 0.25);
     double oddsRatio = LikNoMatch/matchLik;
     double odds = (1-pMatch)/pMatch;
     //double odds = (0.5)/pMatch;
     double posterior = 1 / (1 + oddsRatio * odds);
     // double posterior = pow((1 + (LikNoMatch/matchLik)*((1-pMatch)/pMatch)),-1);
-
-    // std::cerr << "pMatch\t" << pMatch << std::endl;
-    // std::cerr << "seq id\t" << res.seqId << std::endl;
-    // std::cerr << "p_ct_match\t" << matchLik << std::endl;
-    // std::cerr << "p_ct_no_match\t" << LikNoMatch << std::endl;
-    // std::cerr << "oddsRatio\t" << oddsRatio << std::endl;
-    // std::cerr << "odds\t" << odds << std::endl;
-    // std::cerr << "posterior\t" << posterior << std::endl;
-    // unsigned int mm_count = (1 - res.seqId) * res.alnLength + 0.5;
-    // unsigned int m_count = res.seqId * res.alnLength;
-    // std::cerr << "mm_count\t" << mm_count << std::endl;
-    // std::cerr << "m_count\t" << m_count << std::endl;
  
     return posterior;
 }
@@ -143,49 +148,44 @@ float ancientMatchCount(Matcher::result_t res, char* querySeq, char* targetSeq, 
         
         int qBase = nucleotideMap[querySeq[res.qStartPos + pos]];
         int tBase = nucleotideMap[targetSeq[res.dbStartPos + pos]];
-
-        // std::cerr << "qBase " << qBase << std::endl;
-        // std::cerr << "tBase " << tBase << std::endl;
         
         // check for C-to-T and G-to-A:
         bool dimerCT = ((4*qBase + tBase) == 7 ); // = 4*1 + 3
         bool dimerGA = ((4*qBase + tBase) == 8 ); // = 4*2 + 0
-
-        // std::cerr << "dimerCT " << dimerCT << std::endl;
-        // std::cerr << "dimerGA " << dimerGA << std::endl;
 
         double matchLik = 0;
         unsigned int subDeamLen = subDeamDiNuc.size();
         const bool rightStart = res.dbStartPos == 0 && (res.dbEndPos != static_cast<int>(res.dbLen)-1);
         const bool leftStart = res.qStartPos == 0   && (res.qEndPos != static_cast<int>(res.qLen)-1);
 
-        // right overlap
-        if ( rightStart ){
-            //std::cerr << "right start" << std::endl;
-            if ( pos < 5 ){
-                matchLik = subDeamDiNuc[pos].p[qBase][tBase];
-            }
-            else if ( pos >= res.dbLen - 5 ){
-                matchLik = subDeamDiNuc[subDeamLen - (res.alnLength - pos)].p[qBase][tBase];
-            }
-            else{
-                matchLik = subDeamDiNuc[5].p[qBase][tBase];
-            }
-        }
-        //left overlap
-        else if ( leftStart ){
-            //std::cerr << "left start" << std::endl;
-            // Iterating over the alignment
-            if ( res.dbStartPos + pos < 5 ){
-                matchLik = subDeamDiNuc[res.dbStartPos + pos].p[qBase][tBase];
-            }
-            else if ( pos >= res.alnLength - 5 ){
-                matchLik = subDeamDiNuc[subDeamLen - (res.alnLength - pos)].p[qBase][tBase];
-            }
-            else{
-                matchLik = subDeamDiNuc[5].p[qBase][tBase];
-            }
-        }
+        // // right overlap
+        // if ( rightStart ){
+        //     //std::cerr << "right start" << std::endl;
+        //     if ( pos < 5 ){
+        //         matchLik = subDeamDiNuc[pos].p[qBase][tBase];
+        //     }
+        //     else if ( pos >= res.dbLen - 5 ){
+        //         matchLik = subDeamDiNuc[subDeamLen - (res.alnLength - pos)].p[qBase][tBase];
+        //     }
+        //     else{
+        //         matchLik = subDeamDiNuc[5].p[qBase][tBase];
+        //     }
+        // }
+        // //left overlap
+        // else if ( leftStart ){
+        //     //std::cerr << "left start" << std::endl;
+        //     // Iterating over the alignment
+        //     if ( res.dbStartPos + pos < 5 ){
+        //         matchLik = subDeamDiNuc[res.dbStartPos + pos].p[qBase][tBase];
+        //     }
+        //     else if ( pos >= res.alnLength - 5 ){
+        //         matchLik = subDeamDiNuc[subDeamLen - (res.alnLength - pos)].p[qBase][tBase];
+        //     }
+        //     else{
+        //         matchLik = subDeamDiNuc[5].p[qBase][tBase];
+        //     }
+        // }
+        matchLik = subDeamDiNuc[5].p[qBase][tBase];
 
         if ( dimerCT && matchLik > 0 ){
             mCT += deamMatches(res, scoreAln, matchLik);
@@ -205,11 +205,8 @@ float ancientMatchCount(Matcher::result_t res, char* querySeq, char* targetSeq, 
             //std::cerr << "matchLik GA\t" << matchLik << std::endl;
             mGA += deamMatches(res, scoreAln, matchLik);
         }
-
     }
-
     float matches = ((static_cast<float>(scoreAln) + 3.0f*res.alnLength) / 5.0f) + mCT + mGA; // TODO: use match score from nucleotide.out
-
     return matches;
 }
 
@@ -222,11 +219,9 @@ float ancientMatchCountContig(Matcher::result_t res, char* querySeq, char* targe
 
     float mCT = 0;
     float mGA = 0;
-
     unsigned int mmCons = (1 - res.seqId) * res.alnLength + 0.5;
     unsigned int mCons = res.alnLength - mmCons;
     unsigned int scoreAln = mCons * 2 + mmCons * (-3); // TTODO: use match score from nucleotide.out
-
     for (unsigned int pos = 0; pos < res.alnLength; pos++){
         
         int qBase = nucleotideMap[querySeq[res.qStartPos + pos]];
@@ -247,11 +242,8 @@ float ancientMatchCountContig(Matcher::result_t res, char* querySeq, char* targe
             //std::cerr << "matchLik GA\t" << matchLik << std::endl;
             mGA += deamMatches(res, scoreAln, matchLik);
         }
-
     }
-
     float matches = 0.5*(res.alnLength + static_cast<float>(scoreAln)/static_cast<float>(2) + mCT + mGA); // TODO: use match score from nucleotide.out
-
     return matches;
 }
 
@@ -466,9 +458,6 @@ void calc_likelihood(scorePerRes & scoredRes, char* querySeq, const char* target
 void initDeamProbabilities(const std::string & deam5pfreqE,const std::string & deam3pfreqE, std::vector<substitutionRates> & sub5p, std::vector<substitutionRates> & sub3p, std::vector<diNucleotideProb> & allDeam, std::vector<diNucleotideProb> & revAllDeam){
 
     // std::vector<std::vector<diNucleotideProb>> & allDeam
-
-
-
     if ( deam3pfreqE == "3p.prof" && deam5pfreqE == "5p.prof"){
         for(unsigned int row=0;row<5;row++){
             substitutionRates noDamP;
@@ -489,15 +478,8 @@ void initDeamProbabilities(const std::string & deam5pfreqE,const std::string & d
     //double midSub5[16] = { 1, 0, 0, 0, 0, 0.95, 0, 0.05, 0, 0, 1, 0, 0, 0, 0, 1 };
     //double midSub3[16] = { 1, 0, 0, 0, 0, 1, 0, 0, 0.05, 0, 0.95, 0, 0, 0, 0, 1 };
 
-    float defaultBoth[16] = { 1, 0, 0, 0, 0, 0.99, 0, 0.01, 0.01, 0, 0.99, 0, 0, 0, 0, 1 };
-    //float defaultBoth[16] = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
-
-    std::unordered_map<int, float> defaultGA = {
-        {8, 0.01},
-        {10, 0.99}};
-    std::unordered_map<int, float> defaultCT = {
-        {5, 0.99},
-        {7, 0.01}};
+    //float defaultBoth[16] = { 1, 0, 0, 0, 0, 0.99, 0, 0.01, 0.01, 0, 0.99, 0, 0, 0, 0, 1 };
+    float defaultBoth[16] = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
 
 
     // Default matrix for middle part
@@ -509,6 +491,29 @@ void initDeamProbabilities(const std::string & deam5pfreqE,const std::string & d
             defaultDeam.p[i][j] = defaultBoth[idx];
         }
     }
+
+    // Create new "default-both-matrix" by taking over the last elements in the provided damage patterns
+    if (!sub5p.empty()) {
+        const auto& origStruct = sub5p.back(); // Directly access the last element
+        // C->T: orig-struct.s[5]
+        defaultDeam.p[1][3] = origStruct.s[5]; // C-T value
+        defaultDeam.p[1][1] = 1 - origStruct.s[5]; // C-C value
+    }
+
+    if (!sub3p.empty()) {
+        // Same here for G-A
+        const auto& origStruct = sub3p.back(); // Directly access the last element
+        // G->A: orig-struct.s[6]
+        defaultDeam.p[2][0] = origStruct.s[6]; // G-A value
+        defaultDeam.p[2][2] = 1 - origStruct.s[6]; // G-G value
+    }
+
+    std::unordered_map<int, double> defaultCT = {
+        {5, defaultDeam.p[1][1]},
+        {7, defaultDeam.p[1][3]}};
+    std::unordered_map<int, double> defaultGA = {
+        {8, defaultDeam.p[2][0]},
+        {10, defaultDeam.p[2][2]}};
 
     // Initialize vector of diNucleotideProb structs
     std::vector<diNucleotideProb> subDeam;

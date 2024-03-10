@@ -57,9 +57,11 @@ class LocalParameters : public Parameters {
 
     float randomAlignPenal;
     float correctionThreshold;
+    float correctionThresholdSeqId;
+    float likelihoodThreshold;
     float mergeSeqIdThr;
     std::string ancientDamagePath;
-
+    int numIterationsReads;
 
     MultiParam<char*> prefilterScoringMatrixFile;       // path to scoring matrix
     MultiParam<int> multiNumIterations;
@@ -99,7 +101,10 @@ class LocalParameters : public Parameters {
     PARAMETER(PARAM_MULTI_SPACED_KMER_PATTERN)
     PARAMETER(PARAM_RAND_ALIGN)
     PARAMETER(PARAM_CORR_THRESH)
+    PARAMETER(PARAM_CORR_THRESH_SEQID)
+    PARAMETER(PARAM_READ_EXT_THRESH)
     PARAMETER(PARAM_DAMAGE_PATH)
+    PARAMETER(PARAM_NUM_ITERATIONS_READS)
     PARAMETER(PARAM_MIN_SEQ_MERGE_ID)
 
    private:
@@ -140,9 +145,12 @@ class LocalParameters : public Parameters {
                         PARAM_MULTI_SPACED_KMER_MODE(PARAM_MULTI_SPACED_KMER_MODE_ID, "--spaced-kmer-mode", "Spaced k-mers", "0: use consecutive positions in k-mers; 1: use spaced k-mers", typeid(MultiParam<int>), (void *)&multiSpacedKmer, "^[0-1]{1}", MMseqsParameter::COMMAND_EXPERT),
                         PARAM_MULTI_SPACED_KMER_PATTERN(PARAM_MULTI_SPACED_KMER_PATTERN_ID, "--spaced-kmer-pattern", "User-specified spaced k-mer pattern", "User-specified spaced k-mer pattern", typeid(MultiParam<char *>), (void *)&multiSpacedKmerPattern, "", MMseqsParameter::COMMAND_EXPERT),
 
-                        PARAM_RAND_ALIGN(PARAM_RAND_ALIGN_ID, "--ext-random-align", "random alignment", "Use either: 0.5, 0.75, 0.625", typeid(float), (void *) &randomAlignPenal, "", MMseqsParameter::COMMAND_EXPERT),
+                        PARAM_RAND_ALIGN(PARAM_RAND_ALIGN_ID, "--ext-random-align", "random alignment", "Use either: 0.8 or 0.9", typeid(float), (void *) &randomAlignPenal, "", MMseqsParameter::COMMAND_EXPERT),
                         PARAM_CORR_THRESH(PARAM_CORR_THRESH_ID, "--correction-min-ry-seqid", "Seq. ident. in RY-space to increase precision of correction" , "Range 0-1", typeid(float), (void *) &correctionThreshold, "", MMseqsParameter::COMMAND_EXPERT),
+                        PARAM_CORR_THRESH_SEQID(PARAM_CORR_THRESH_SEQID_ID, "--correction-min-seqid", "Seq. ident. to increase precision of correction" , "Range 0-1", typeid(float), (void *) &correctionThresholdSeqId, "", MMseqsParameter::COMMAND_EXPERT),
+                        PARAM_READ_EXT_THRESH(PARAM_READ_EXT_THRESH_ID, "--likelihood-ratio-threshold", "Min. odds ratio threshold for read extension" , "Range 0-1", typeid(float), (void *) &likelihoodThreshold, "", MMseqsParameter::COMMAND_EXPERT),
                         PARAM_DAMAGE_PATH(PARAM_DAMAGE_PATH_ID, "--ancient-damage", "path to deamination patterns of ancient DNA", "Path to dir", typeid(std::string), (void *) &ancientDamagePath, "", MMseqsParameter::COMMAND_EXPERT),
+                        PARAM_NUM_ITERATIONS_READS(PARAM_NUM_ITERATIONS_READS_ID, "--num-iter-reads-only", "Number of assembly iterations with raw reads only", "Raw reads only: Number of assembly iterations performed on nucleotide level,protein level (range 1-inf)", typeid(int), (void *)&numIterationsReads, "^[1-9]{1}[0-9]*$"),
                         PARAM_MIN_SEQ_MERGE_ID(PARAM_MIN_SEQ_MERGE_ID_ID, "--min-merge-seq-id", "Seq. id. threshold during merging", "List matches above this sequence identity (for merging contigs) (range 0.0-1.0)", typeid(float), (void *) &mergeSeqIdThr, "", MMseqsParameter::COMMAND_EXPERT){
 
         // assembleresult
@@ -155,6 +163,8 @@ class LocalParameters : public Parameters {
             &PARAM_RESCORE_MODE);  // temporary added until assemble and nuclassemble use same rescoremode
         assembleresults.push_back(&PARAM_RAND_ALIGN);
         assembleresults.push_back(&PARAM_CORR_THRESH);
+        assembleresults.push_back(&PARAM_CORR_THRESH_SEQID);
+        assembleresults.push_back(&PARAM_READ_EXT_THRESH);
         assembleresults.push_back(&PARAM_MIN_SEQ_MERGE_ID);
         assembleresults.push_back(&PARAM_DAMAGE_PATH);
 
@@ -223,6 +233,7 @@ class LocalParameters : public Parameters {
         nuclassembleworkflow.push_back(&PARAM_REMOVE_TMP_FILES);
         nuclassembleworkflow.push_back(&PARAM_DELETE_TMP_INC);
         nuclassembleworkflow.push_back(&PARAM_RUNNER);
+        nuclassembleworkflow.push_back(&PARAM_NUM_ITERATIONS_READS);
 
         // guidedassembleresults
         guidedassembleresults.push_back(&PARAM_MIN_SEQ_ID);
@@ -306,15 +317,18 @@ class LocalParameters : public Parameters {
         prefilterMaskMode = false;
         prefilterCompBiasCorrection = false;
 
-        multiNumIterations = MultiParam<int>(8, 4);
+        multiNumIterations = MultiParam<int>(9, 1);
+        numIterationsReads = 3;
         multiKmerSize = MultiParam<int>(14, 22);
         multiAlnLenThr = MultiParam<int>(0, 0);
         multiSeqIdThr = MultiParam<float>(0.97, 0.97);
         multiSpacedKmer = MultiParam<int>(0, 0);
         prefilterScoringMatrixFile =  MultiParam<char*>("blosum62.out", "nucleotide.out");
 
-        randomAlignPenal = 0.675;
+        randomAlignPenal = 0.9;
         correctionThreshold = 0.99;
+        correctionThresholdSeqId = 0.93;
+        likelihoodThreshold = 0.5;
         mergeSeqIdThr = 0.99;
         ancientDamagePath = "";
 

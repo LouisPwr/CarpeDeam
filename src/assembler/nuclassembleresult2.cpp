@@ -42,20 +42,26 @@ public:
             log_r = log(alpha1+idx)+log(beta2+idx)-(log(idx+1) + log(idx+alpha1+beta1+beta2)) + log_r;
         }
         //p *= c;
+        // unsigned int extLenR1 = (r1.dbLen - r1.alnLength);
+        // unsigned int extLenR2 = (r2.dbLen - r2.alnLength);
 
-        unsigned int extLenR1 = (r1.dbLen - r1.alnLength);
-        unsigned int extLenR2 = (r2.dbLen - r2.alnLength);
-        unsigned int maxExtLen = (extLenR1 > extLenR2) ? extLenR1 : extLenR2;
+        unsigned int maxDbLen = (r1.dbLen > r2.dbLen) ? r1.dbLen : r2.dbLen;
 
-        double extRatioR1 = static_cast<double>(extLenR1) / static_cast<double>(maxExtLen);
-        double extRatioR2 = static_cast<double>(extLenR2) / static_cast<double>(maxExtLen);
+        double dbRatioR1 = static_cast<double>(r1.dbLen) / static_cast<double>(maxDbLen);
+        double dbRatioR2 = static_cast<double>(r2.dbLen) / static_cast<double>(maxDbLen);
 
-        double wIdentR1 = (0.495 * r1.seqId + 0.495 * r1.rySeqId + 0.01 * extRatioR1);
-        double wIdentR2 = (0.495 * r2.seqId + 0.495 * r2.rySeqId + 0.01 * extRatioR2); 
+        double wIdentR1 = (0.495 * r1.seqId + 0.495 * r1.rySeqId + 0.01 * dbRatioR1);
+        double wIdentR2 = (0.495 * r2.seqId + 0.495 * r2.rySeqId + 0.01 * dbRatioR2); 
+
+
+        // double alnRatioR1 = static_cast<double>(r1.alnLength) / static_cast<double>(r1.qLen);
+        // double alnRatioR2 = static_cast<double>(r2.alnLength) / static_cast<double>(r2.qLen);
+        // double wIdentR1 = (0.99 * r1.seqId + 0.01 * alnRatioR1);
+        // double wIdentR2 = (0.99 * r2.seqId + 0.01 * alnRatioR2); 
 
         if (p < 0.45)
             return true;
-        if (p  > 0.55)
+        if (p > 0.55)
             return false;
         //if (r1.dbLen - r1.alnLength < r2.dbLen - r2.alnLength)
         //    return true;

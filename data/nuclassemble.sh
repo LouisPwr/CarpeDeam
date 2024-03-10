@@ -97,7 +97,7 @@ fi
 while [ $STEP -lt $NUM_IT ]; do
     echo "STEP: $STEP"
 
-    if [ $STEP -lt 5 ]; then
+    if [ $STEP -lt $NUM_IT_READS ]; then
 
         # 1. Finding exact $k$-mer matches.
         if notExists "${TMP_PATH}/pref_${STEP}.done"; then
@@ -201,10 +201,21 @@ while [ $STEP -lt $NUM_IT ]; do
             PREV_ALN_ASM="${TMP_PATH}/aln_asm_${STEP}"
         fi
 
+        # Louis was here
+        # 5.5 Deamination correction
+        if notExists "${TMP_PATH}/correction.done"; then
+            # shellcheck disable=SC2086
+            "$MMSEQS" corrections "$INPUT" "${TMP_PATH}/aln_asm_${STEP}" "${TMP_PATH}/correction_${STEP}" ${ASSEMBLE_RESULT_PAR} \
+                || fail "corrections died"
+            touch "${TMP_PATH}/correction_${STEP}.done"
+            deleteIncremental "$PREV_CORR"
+            PREV_CORR="${TMP_PATH}/correction_${STEP}"
+        fi
+
         # 6. Assemble only with contigs
         if notExists "${TMP_PATH}/assembly_contigs_${STEP}.done"; then
             # shellcheck disable=SC2086
-            "$MMSEQS" nuclassembleresults2 "$INPUT" "${TMP_PATH}/aln_asm_${STEP}" "${TMP_PATH}/assembly_contigs_${STEP}" ${ASSEMBLE_RESULT_PAR} \
+            "$MMSEQS" nuclassembleresults2 "${TMP_PATH}/correction_${STEP}" "${TMP_PATH}/aln_asm_${STEP}" "${TMP_PATH}/assembly_contigs_${STEP}" ${ASSEMBLE_RESULT_PAR} \
                 || fail "Assembly step died"
             touch "${TMP_PATH}/assembly_contigs_${STEP}.done"
             deleteIncremental "$PREV_CONTIG_ASSEMBLY"

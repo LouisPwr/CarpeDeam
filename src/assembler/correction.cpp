@@ -47,46 +47,6 @@ int mostLikeliBaseRead(int qIter, diNucleotideProb & match, diNucleotideProb & m
     return idxMax;
 }
 
-/* int mostLikeliBaseContig(int contigBase, int qIter, diNucleotideProb & match, diNucleotideProb & mismatch, std::vector<countDeamCov> & deamVec, std::vector<countDeamCov> & countRevs, std::vector<diNucleotideProb> & subDeamDiNuc, std::vector<diNucleotideProb> & subDeamDiNucRev)
-{
-    std::vector<double> baseLikelis; 
-
-    // Initial likelihod of qBase (either A,C,G or T)
-    std::vector<float> baseFreqs = { 0.23554, 0.26446, 0.26446, 0.23554 };
-    for ( int qBase=0; qBase<4; qBase++ ){
-        double qBaseLik = 0;
-        double seqLik = match.p[qBase][contigBase];
-        for (int tBase=0; tBase < 4; tBase++){
-            // The vector deamVec contains the counts of deaminations per position;
-            // Iterating through it to make the amount of multiplications we need to do. 
-            for ( unsigned int l = 0; l < subDeamDiNuc.size(); l++){
-                double deamPattern = subDeamDiNuc[l].p[qBase][tBase];
-                double deamPatternRev = subDeamDiNucRev[l].p[qBase][tBase];
-                // this can only be true in case of a mismatch of Pur<->Pyr
-                if ( deamPattern == 0.0 )
-                {
-                    deamPattern = 1.0;
-                }
-                if ( deamPatternRev == 0.0 )
-                {
-                    deamPatternRev = 1.0;
-                }
-
-                int covDeam = deamVec[qIter].count[tBase][l];
-                int numReverse = countRevs[qIter].count[tBase][l];
-                qBaseLik += (covDeam - numReverse)*( log( baseFreqs[qBase] ) + log(deamPattern) + log(seqLik) );
-                qBaseLik += numReverse*( log( baseFreqs[qBase] ) + log(deamPatternRev) + log(seqLik) );
-            }
-        }
-        baseLikelis.push_back(qBaseLik);
-    }
-
-    auto maxLik = std::max_element(baseLikelis.begin(), baseLikelis.end());
-    int idxMax = std::distance(baseLikelis.begin(), maxLik);
-
-    return idxMax;
-} */
-
 
 
 int doCorrection(LocalParameters &par) {
@@ -117,11 +77,6 @@ int doCorrection(LocalParameters &par) {
     
     std::string high5 = userInput + "5p.prof";
     std::string high3 = userInput + "3p.prof";
-    // if ( userInput.empty() ){
-    //     createNoDamageMatrix("none.prof");
-    //     high5 = "none.prof";
-    //     high3 = "none.prof";
-    // }
 
 #pragma omp parallel
     {
@@ -148,9 +103,7 @@ int doCorrection(LocalParameters &par) {
         {'T', 1}};
 
 
-        // define length here
-        //int maxFragLen = 250; 
-        //std::vector<std::vector<diNucleotideProb>> allDeam(maxFragLen);
+        // Preparation of damage related variables and data structures
         std::vector<diNucleotideProb> subDeamDiNuc(11);
         //Substitution rates due to deamination
         std::vector<substitutionRates> sub5p;
@@ -161,7 +114,39 @@ int doCorrection(LocalParameters &par) {
         //std::cerr << "Before initDeamProbabilities" << std::endl;
         initDeamProbabilities(high5, high3, sub5p, sub3p, subDeamDiNuc, subDeamDiNucRev);
 
-        //std::vector<diNucleotideProb> subDeamDiNucRev;
+        // scale "min sequence identity threshold" for read extension based on maximum damage.
+        // Initialize maxDamage
+        long double maxDamage = 0;
+        // Iterate through the vector to find maxDamage
+        for (const auto& diNuc : subDeamDiNuc) {
+            // Check specific elements as per your logic
+            maxDamage = std::max(maxDamage, diNuc.p[1][3]);
+            maxDamage = std::max(maxDamage, diNuc.p[2][0]);
+        }
+        // float minSeqIdReads = 0.95; // Default value if maxDamage <= 0.2
+
+        // if (maxDamage >= 0.275) {
+        //     minSeqIdReads = 0.92;
+        // } else if (maxDamage >= 0.2) { // This means maxDamage is between 0.2 and 0.3
+        //     // Scale linearly between 0.9 and 0.95. The formula for linear scaling is:
+        //     // minId = startValue + (endValue - startValue) * (currentValue - minValue) / (maxValue - minValue)
+        //     // Here, we map the scale such that 0.2 maps to 0.95 and 0.3 maps to 0.9
+        //     minSeqIdReads = 0.96 - (0.96 - 0.92) * (maxDamage - 0.2) / (0.275 - 0.2);
+        // }
+
+        float minSeqIdReads = par.seqIdThr;
+
+        if (par.seqIdThr < 0.95) {
+            minSeqIdReads = 0.95; // Default value if maxDamage <= 0.2
+            if (maxDamage >= 0.275) {
+                minSeqIdReads = par.seqIdThr;
+            } else if (maxDamage >= 0.2) { // This means maxDamage is between 0.2 and 0.3
+                // Scale linearly between 0.9 and 0.95. The formula for linear scaling is:
+                // minId = startValue + (endValue - startValue) * (currentValue - minValue) / (maxValue - minValue)
+                // Here, we map the scale such that 0.2 maps to 0.95 and 0.3 maps to 0.9
+                minSeqIdReads = 0.95 - (0.95 - par.seqIdThr) * (maxDamage - 0.2) / (0.275 - 0.2);
+            }
+        }
 
         diNucleotideProb seqErrMatch;
         diNucleotideProb seqErrMis;
@@ -170,7 +155,6 @@ int doCorrection(LocalParameters &par) {
         getSeqErrorProf(seqErrMatch, seqErrMis, seqErrCorrection);
 
         float rymerThresh = par.correctionThreshold;
-
 
         int reverse = 0;
         int good = 0;
@@ -191,8 +175,6 @@ int doCorrection(LocalParameters &par) {
 
             bool qWasExtended = false;
 
-            ////std::cerr << "query id: " << queryKey << std::endl;
-            //std::cerr << "\n" << "new query: " << id << std::endl;
             for (size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
 
                 int rawScore = static_cast<int>(evaluer.computeRawScoreFromBitScore(alignments[alnIdx].score) + 0.5);
@@ -252,10 +234,16 @@ int doCorrection(LocalParameters &par) {
                 //const bool notInside = target.dbLen != target.alnLength;
                 //const bool rightStart = target.dbStartPos == 0;
                 //const bool leftStart = target.qStartPos == 0;
-
+                
                 unsigned int targetId = sequenceDbr->getId(target.dbKey);
                 char *tarSeq = sequenceDbr->getData(targetId, thread_idx);
                 char *tSeq;
+
+                bool isContig = sequenceDbr->getExtData(targetId);
+                float seqIdThresh = minSeqIdReads;
+                if (isContig == true) {
+                    seqIdThresh = (2.0f + seqIdThresh) / 3.0f;
+                }
 
                 //const bool notInside = true;
                 //const bool rightStart = true;
@@ -276,17 +264,11 @@ int doCorrection(LocalParameters &par) {
                 else {
                     tSeq = tarSeq;
                 }
-        //}
 
                 float ryId = getRYSeqId(target, querySeq,  tSeq, ryMap);
                 target.rySeqId = ryId;
 
-                //float subSeqId = getSubSeqId(target, querySeq, tSeq);
-
-                //std::cerr << "RySeqId:\t" << target.rySeqId;
-                //std::cerr << "\n" << std::endl;
-
-                if ( targetWasExt == false && isNotIdentity && target.rySeqId >= rymerThresh && target.alnLength >= 15 ){
+                if ( targetWasExt == false && isNotIdentity && target.rySeqId >= rymerThresh && target.seqId >= seqIdThresh && target.alnLength >= 30 ){
 
                     //std::cerr << ">" << target.dbKey << std::endl;
                     //std::cerr << tSeq; 
@@ -322,7 +304,6 @@ int doCorrection(LocalParameters &par) {
                     {
                         delete[] tSeq;
                     }
-
             }
 
             char * corrQuery = new char[querySeqLen];

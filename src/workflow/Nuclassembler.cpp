@@ -10,6 +10,7 @@
 void setNuclAssemblerWorkflowDefaults(LocalParameters *p) {
 
     p->numIterations = 8;
+    p->numIterationsReads = 3;
     p->kmerSize = 22;
     p->seqIdThr = 0.99;
     p->rySeqIdThr = 0.99;
@@ -96,6 +97,7 @@ int nuclassemble(int argc, const char **argv, const Command &command) {
 
     cmd.addVariable("RUNNER", par.runner.c_str());
     cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
+    cmd.addVariable("NUM_IT_READS", SSTR(par.numIterationsReads).c_str());
     // # 1. Finding exact $k$-mer matches.
     cmd.addVariable("KMERMATCHER_PAR", par.createParameterString(par.kmermatcher).c_str());
 
@@ -117,6 +119,8 @@ int nuclassemble(int argc, const char **argv, const Command &command) {
     // Louis was here
     cmd.addVariable("RANDOM_ALN_PENAL", SSTR(par.randomAlignPenal).c_str());
     cmd.addVariable("CORRECTION_THRESHOLD", SSTR(par.correctionThreshold).c_str());
+    cmd.addVariable("CORRECTION_THRESHOLD_SEQID", SSTR(par.correctionThresholdSeqId).c_str());
+    cmd.addVariable("LIKELIHOOD_THRESHOLD", SSTR(par.likelihoodThreshold).c_str());
     cmd.addVariable("SEQ_ID_MERGE_THRESH", SSTR(par.mergeSeqIdThr).c_str());
     cmd.addVariable("PATH_TO_DAMAGE_PATTERN", SSTR(par.ancientDamagePath).c_str());
 

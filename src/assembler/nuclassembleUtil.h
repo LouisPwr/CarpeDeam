@@ -31,7 +31,6 @@ typedef struct {
     long double s[16];
 } probSubstition;
 
-
 typedef struct {
     long double p[4][4];
 } diNucleotideProb;

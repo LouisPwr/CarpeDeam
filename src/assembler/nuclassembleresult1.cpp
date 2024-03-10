@@ -157,9 +157,7 @@ int doNuclAssembly1(LocalParameters &par) {
         {'G', 0},
         {'T', 1}};
 
-        // define length here
-        //int maxFragLen = 250; 
-        //std::vector<std::vector<diNucleotideProb>> allDeam(maxFragLen);
+        // Preparation of damage related variables and data structures
         std::vector<diNucleotideProb> subDeamDiNuc(11);
         //Substitution rates due to deamination
         std::vector<substitutionRates> sub5p;
@@ -169,10 +167,35 @@ int doNuclAssembly1(LocalParameters &par) {
         //std::cerr << "Before initDeamProbabilities" << std::endl;
         initDeamProbabilities(high5, high3, sub5p, sub3p, subDeamDiNuc, subDeamDiNucRev);
 
+        // scale "min sequence identity threshold" for read extension based on maximum damage.
+        // Initialize maxDamage
+        long double maxDamage = 0;
+        // Iterate through the vector to find maxDamage
+        for (const auto& diNuc : subDeamDiNuc) {
+            // Check specific elements as per your logic
+            maxDamage = std::max(maxDamage, diNuc.p[1][3]);
+            maxDamage = std::max(maxDamage, diNuc.p[2][0]);
+        }
+        
+        float minSeqIdReads = par.seqIdThr;
+
+        if (par.seqIdThr < 0.95) {
+            minSeqIdReads = 0.95; // Default value if maxDamage <= 0.2
+            if (maxDamage >= 0.275) {
+                minSeqIdReads = par.seqIdThr;
+            } else if (maxDamage >= 0.2) { // This means maxDamage is between 0.2 and 0.3
+                // Scale linearly between 0.9 and 0.95. The formula for linear scaling is:
+                // minId = startValue + (endValue - startValue) * (currentValue - minValue) / (maxValue - minValue)
+                // Here, we map the scale such that 0.2 maps to 0.95 and 0.3 maps to 0.9
+                minSeqIdReads = 0.95 - (0.95 - par.seqIdThr) * (maxDamage - 0.2) / (0.275 - 0.2);
+            }
+        }
+        
+
         diNucleotideProb seqErrMatch;
         diNucleotideProb seqErrMis;
 
-        long double seqErrCorrection= 0.01;
+        long double seqErrCorrection= 0.001;
         getSeqErrorProf(seqErrMatch, seqErrMis, seqErrCorrection);
 
         float randAlnPenal = par.randomAlignPenal;
@@ -258,8 +281,8 @@ int doNuclAssembly1(LocalParameters &par) {
                         useReverse[sequenceDbr->getId(alignments[alnIdx].dbKey)] = false;
                         alignments[alnIdx].isRevToAlignment = false;
                     }
-                    #pragma omp atomic
-                    totalQuer += 1;
+                    // #pragma omp atomic
+                    // totalQuer += 1;
                 }
 
                 if (alignments.size() > 1){
@@ -312,11 +335,11 @@ int doNuclAssembly1(LocalParameters &par) {
                 const bool leftStart = notContig[alnIdx].qStartPos == 0;
                 const bool isNotIdentity = (notContig[alnIdx].dbKey != queryKey);
 
-                if ( (rightStart || leftStart) && notInside && isNotIdentity && notContig[alnIdx].rySeqId >= par.rySeqIdThr )
+                if ( (rightStart || leftStart) && notInside && isNotIdentity && notContig[alnIdx].rySeqId >= par.rySeqIdThr && notContig[alnIdx].seqId >= minSeqIdReads )
                 {
                     //std::cerr << "a" << std::endl;
                     scorePerRes toAdd = r_s_pair(notContig[alnIdx], querySeq, targetSeq, subDeamDiNuc, subDeamDiNucRev, maxAlnLeft, maxAlnRight, randAlnPenal, seqErrMatch, seqErrMis);
-                    if ( toAdd.sRatio > 0.95 ) {
+                    if ( toAdd.sRatio > par.likelihoodThreshold ) {
                         alnQueueReads.push( toAdd );
                     }
                 }
@@ -392,8 +415,8 @@ int doNuclAssembly1(LocalParameters &par) {
                         else
                            fragment = std::string(targetSeq + dbEndPos + 1, fragLen);
 
-                        #pragma omp atomic
-                        totalRight += 1;
+                        // #pragma omp atomic
+                        // totalRight += 1;
                         if ( maxAlnRight == besttHitToExtend.alnLength )
                         {
                             #pragma omp atomic
@@ -432,8 +455,8 @@ int doNuclAssembly1(LocalParameters &par) {
                         else
                             fragment = std::string(targetSeq, fragLen);
                         
-                        #pragma omp atomic
-                        totalLeft += 1;
+                        // #pragma omp atomic
+                        // totalLeft += 1;
                         if ( maxAlnLeft == besttHitToExtend.alnLength )
                         {
                             #pragma omp atomic
@@ -458,11 +481,6 @@ int doNuclAssembly1(LocalParameters &par) {
                 querySeq = (char *) query.c_str();
 
                 // update alignments
-
-/*                 std::vector<unsigned int> ID_2l;
-                std::vector<double> score_2l;
-                std::vector<unsigned int> ID_2r;
-                std::vector<double> score_2r; */
 
                 for(size_t alnIdx = 0; alnIdx < tmpAlignmentsReads.size(); alnIdx++) {
 
@@ -507,7 +525,7 @@ int doNuclAssembly1(LocalParameters &par) {
                     const bool leftStart = tmpAlignmentsReads[alnIdx].qStartPos == 0;
                     const bool isNotIdentity = (tmpAlignmentsReads[alnIdx].dbKey != queryKey);
 
-                    if(tmpAlignmentsReads[alnIdx].seqId >= par.seqIdThr && (rightStart || leftStart) && isNotIdentity && notInside)
+                    if(tmpAlignmentsReads[alnIdx].seqId >= minSeqIdReads && (rightStart || leftStart) && isNotIdentity && notInside)
                         {
                             unsigned int tId = sequenceDbr->getId(tmpAlignmentsReads[alnIdx].dbKey);
                             char *tSeq = sequenceDbr->getData(tId, thread_idx);
@@ -520,7 +538,7 @@ int doNuclAssembly1(LocalParameters &par) {
                             }
 
                             scorePerRes toAdd = r_s_pair(tmpAlignmentsReads[alnIdx], querySeq, tSeq, subDeamDiNuc, subDeamDiNucRev, maxAlnLeft, maxAlnRight, randAlnPenal, seqErrMatch, seqErrMis);
-                            if ( toAdd.sRatio > 0.95 ) {
+                            if ( toAdd.sRatio > par.likelihoodThreshold ) {
                                 alnQueueReads.push( toAdd );
                             }
                             if (deleteTargetSeq) {
@@ -593,11 +611,11 @@ score_1r.clear();
 
 } // end parallel
 
-std::cerr << "TotalR" << "\t" << totalRight << std::endl;
-std::cerr << "countR" << "\t" << rightExtLongest << std::endl;
-std::cerr << "TotalL" << "\t" << totalLeft << std::endl;
-std::cerr << "countL" << "\t" << leftExtLongest << std::endl;
-std::cerr << "NumWasReverse\t" << wasReverse << "\tof\t" << totalQuer << std::endl; 
+// std::cerr << "TotalR" << "\t" << totalRight << std::endl;
+// std::cerr << "countR" << "\t" << rightExtLongest << std::endl;
+// std::cerr << "TotalL" << "\t" << totalLeft << std::endl;
+// std::cerr << "countL" << "\t" << leftExtLongest << std::endl;
+// std::cerr << "NumWasReverse\t" << wasReverse << "\tof\t" << totalQuer << std::endl; 
 
 // add sequences that are not yet assembled
 #pragma omp parallel for schedule(dynamic, 10000)
