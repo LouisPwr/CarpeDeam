@@ -126,6 +126,8 @@ float getRYSeqId(Matcher::result_t & res, char* querySeq,  char* targetSeq, std:
 
 void calc_likelihood(scorePerRes & scoredRes, char* querySeq, const char* targetSeq, std::vector<diNucleotideProb> & subDeamDiNuc, unsigned int maxAln, bool isRightOverlap, float randAlnPenal, diNucleotideProb & seq_err_match, diNucleotideProb & seq_err_mis, float excessPenal);
 
+void calc_likelihood_correction(Matcher::result_t candidate, char* querySeq, const char* targetSeq, std::vector<diNucleotideProb> & subDeamDiNuc, bool isRightOverlap, diNucleotideProb & seqErrMatch, diNucleotideProb & seqErrMis, unsigned int qKey);
+
 int doNuclAssembly1(LocalParameters &par);
 
 int doNuclAssembly2(LocalParameters &par);

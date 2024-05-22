@@ -1,6 +1,7 @@
 #include "nuclassembleUtil.h"
 const double SMOOTHING_VALUE = 0.0000001;
 
+#define DEBUG_CORR
 
 int mostLikeliBaseRead(int qIter, diNucleotideProb & match, diNucleotideProb & mismatch, std::vector<countDeamCov> & deamVec, std::vector<countDeamCov> & countRevs, std::vector<diNucleotideProb> & subDeamDiNuc, std::vector<diNucleotideProb> & subDeamDiNucRev)
 {
@@ -78,6 +79,18 @@ int doCorrection(LocalParameters &par) {
     std::string high5 = userInput + "5p.prof";
     std::string high3 = userInput + "3p.prof";
 
+#ifdef DEBUG_CORR
+    auto currentTime = std::chrono::system_clock::now();
+    std::time_t time = std::chrono::system_clock::to_time_t(currentTime);
+
+    std::stringstream one;
+    one << "coverages_" << time << ".tsv";
+    std::string filenameOne = one.str();
+    std::ofstream outputFileAll;  // Declare the ofstream object globally if possible
+    outputFileAll.open(filenameOne, std::ios::app);  // Open once, append mode
+
+#endif
+
 #pragma omp parallel
     {
         unsigned int thread_idx = 0;
@@ -113,30 +126,6 @@ int doCorrection(LocalParameters &par) {
 
         //std::cerr << "Before initDeamProbabilities" << std::endl;
         initDeamProbabilities(high5, high3, sub5p, sub3p, subDeamDiNuc, subDeamDiNucRev);
-
-        // scale "min sequence identity threshold" for read extension based on maximum damage.
-        // Initialize maxDamage
-        long double maxDamage = 0;
-        // Iterate through the vector to find maxDamage
-        for (const auto& diNuc : subDeamDiNuc) {
-            // Check specific elements as per your logic
-            maxDamage = std::max(maxDamage, diNuc.p[1][3]);
-            maxDamage = std::max(maxDamage, diNuc.p[2][0]);
-        }
-
-        float minSeqIdReads = par.seqIdThr;
-
-        // if (par.seqIdThr < 0.95) {
-        //     minSeqIdReads = 0.95; // Default value if maxDamage <= 0.2
-        //     if (maxDamage >= 0.275) {
-        //         minSeqIdReads = par.seqIdThr;
-        //     } else if (maxDamage >= 0.2) { // This means maxDamage is between 0.2 and 0.3
-        //         // Scale linearly between 0.9 and 0.95. The formula for linear scaling is:
-        //         // minId = startValue + (endValue - startValue) * (currentValue - minValue) / (maxValue - minValue)
-        //         // Here, we map the scale such that 0.2 maps to 0.95 and 0.3 maps to 0.9
-        //         minSeqIdReads = 0.95 - (0.95 - par.seqIdThr) * (maxDamage - 0.2) / (0.275 - 0.2);
-        //     }
-        // }
 
         diNucleotideProb seqErrMatch;
         diNucleotideProb seqErrMis;
@@ -229,11 +218,11 @@ int doCorrection(LocalParameters &par) {
             //unsigned int extLen = 150;
 
             //set threshold when to declare an mge
-            float mgeSeqId = 0.99;
+            float mgeSeqId = 0.9;
             float mgeRySeqId = 0.99;
 
             //set number of bases in overlap to comapare after the alignment ends
-            unsigned int numBaseCompare = 250;
+            unsigned int numBaseCompare = 50;
 
             //counter for left and right extensions
             unsigned int countRightExt = 0;
@@ -290,7 +279,6 @@ int doCorrection(LocalParameters &par) {
                         }
                     }
                 }
-
             }
 
             // Now we iterate through the left and right extensions
@@ -467,44 +455,133 @@ int doCorrection(LocalParameters &par) {
             mgeCandiLeft.clear();
 // MGE marker end
 
+            // if ( queryKey == 4631784 ){
+            //     std::cerr << "mge found left?:\t" << mgeFoundLeft << std::endl;
+            //     std::cerr << "mge found right?:\t" << mgeFoundRight << std::endl;
+            // }
 
-            // choose only contigs
-            std::vector<Matcher::result_t> contigs;
-            //double poorMansQueryCov = coverage[queryKey];
+
+            // choose only reads
+            std::vector<Matcher::result_t> reads;
+
             for (size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
-                //if (alignments[alnIdx].seqId > alnSeqIdThr && (alignments[alnIdx].dbLen - alignments[alnIdx].alnLength <= extLen)){
-                if ( !mgeFoundRight && alignments[alnIdx].dbStartPos == 0 && static_cast<unsigned int>(alignments[alnIdx].qEndPos) == (querySeqLen - 1)) {
-                    // right extension
-                    contigs.push_back(alignments[alnIdx]);
+
+                Matcher::result_t targetRead = alignments[alnIdx];     
+                unsigned int tId = sequenceDbr->getId(targetRead.dbKey);
+                char *tSeq = sequenceDbr->getData(tId, thread_idx);
+                bool deleteTargetSeq = false;
+
+                bool isContig = sequenceDbr->getExtData(tId);
+
+                if ( isContig ){
+                    continue;
                 }
-                else if ( !mgeFoundLeft && alignments[alnIdx].qStartPos == 0 && static_cast<unsigned int>(alignments[alnIdx].dbEndPos) == (alignments[alnIdx].dbLen - 1)) {
-                    // left extension
-                    contigs.push_back(alignments[alnIdx]);
+
+                if (targetRead.isRevToAlignment){
+                    tSeq = getNuclRevFragment(tSeq, targetRead.dbLen, (NucleotideMatrix *) subMat);
+                    deleteTargetSeq = true;
+                }
+                
+                float insideSeqId = getSubSeqId(targetRead, querySeq, tSeq);
+                float insideSeqThr = 0.95;
+
+                if (deleteTargetSeq) {
+                    delete[] tSeq;
+                }
+
+                float ryId = getRYSeqId(targetRead, querySeq,  tSeq, ryMap);
+                targetRead.rySeqId = ryId;
+
+                //if ( targetRead.seqId >= rymerThresh && insideSeqId >= insideSeqThr && !mgeFoundRight && targetRead.dbStartPos == 0 && static_cast<unsigned int>(targetRead.qEndPos) == (querySeqLen - 1)) {
+                if ( targetRead.rySeqId >= rymerThresh && insideSeqId >= insideSeqThr && !mgeFoundRight && targetRead.dbStartPos == 0 && static_cast<unsigned int>(targetRead.qEndPos) == (querySeqLen - 1)) {
+                    // right extension
+                    //here we decide if correction should be done
+                    Matcher::result_t targetRead = alignments[alnIdx];
+
+                    const bool notRightStartAndLeftStart = !(targetRead.dbStartPos == 0 && targetRead.qStartPos == 0 );
+                    const bool rightStart = targetRead.dbStartPos == 0 && (targetRead.dbEndPos != static_cast<int>(targetRead.dbLen)-1);
+                    const bool leftStart = targetRead.qStartPos == 0   && (targetRead.qEndPos != static_cast<int>(targetRead.qLen)-1);
+                    const bool isNotIdentity = (targetRead.dbKey != queryKey);
+
+                    if(notRightStartAndLeftStart && (rightStart || leftStart) && isNotIdentity){
+                        unsigned int tId = sequenceDbr->getId(targetRead.dbKey);
+                        char *tSeq = sequenceDbr->getData(tId, thread_idx);
+                        bool deleteTargetSeq = false;
+
+                        if (targetRead.isRevToAlignment){
+                            tSeq = getNuclRevFragment(tSeq, targetRead.dbLen, (NucleotideMatrix *) subMat);
+                            deleteTargetSeq = true;
+                        }
+
+                        bool isRightOverlap = true;
+                        if (unsigned(targetRead.qStartPos) == 0 && unsigned(targetRead.dbEndPos) == (targetRead.dbLen - 1)) {
+                            isRightOverlap = false;
+                        }
+
+                        std::vector<diNucleotideProb> subDeamDiNucRef = targetRead.isRevToAlignment ? subDeamDiNucRev : subDeamDiNuc;
+                        calc_likelihood_correction(targetRead, querySeq, tSeq, subDeamDiNucRef, isRightOverlap, seqErrMatch, seqErrMis, queryKey);
+                        if (deleteTargetSeq) {
+                            delete[] tSeq;
+                        }
+                    }
+                    reads.push_back(alignments[alnIdx]);
+                }
+                //else if ( targetRead.seqId >= rymerThresh && insideSeqId >= insideSeqThr && !mgeFoundLeft &&  alignments[alnIdx].qStartPos == 0 && static_cast<unsigned int>(alignments[alnIdx].dbEndPos) == (alignments[alnIdx].dbLen - 1)) {
+                else if ( targetRead.rySeqId >= rymerThresh && insideSeqId >= insideSeqThr && !mgeFoundLeft &&  alignments[alnIdx].qStartPos == 0 && static_cast<unsigned int>(alignments[alnIdx].dbEndPos) == (alignments[alnIdx].dbLen - 1)) {
+                    // // left extension
+                    // // here we decide if correction should be done
+                    Matcher::result_t targetRead = alignments[alnIdx];
+
+                    const bool notRightStartAndLeftStart = !(targetRead.dbStartPos == 0 && targetRead.qStartPos == 0 );
+                    const bool rightStart = targetRead.dbStartPos == 0 && (targetRead.dbEndPos != static_cast<int>(targetRead.dbLen)-1);
+                    const bool leftStart = targetRead.qStartPos == 0   && (targetRead.qEndPos != static_cast<int>(targetRead.qLen)-1);
+                    const bool isNotIdentity = (targetRead.dbKey != queryKey);
+
+                    if(notRightStartAndLeftStart && (rightStart || leftStart) && isNotIdentity){
+                        unsigned int tId = sequenceDbr->getId(targetRead.dbKey);
+                        char *tSeq = sequenceDbr->getData(tId, thread_idx);
+                        bool deleteTargetSeq = false;
+
+                        if (targetRead.isRevToAlignment){
+                            tSeq = getNuclRevFragment(tSeq, targetRead.dbLen, (NucleotideMatrix *) subMat);
+                            deleteTargetSeq = true;
+                        }
+
+                        bool isRightOverlap = true;
+                        if (unsigned(targetRead.qStartPos) == 0 && unsigned(targetRead.dbEndPos) == (targetRead.dbLen - 1)) {
+                            isRightOverlap = false;
+                        }
+
+                        std::vector<diNucleotideProb> subDeamDiNucRef = targetRead.isRevToAlignment ? subDeamDiNucRev : subDeamDiNuc;
+                        calc_likelihood_correction(targetRead, querySeq, tSeq, subDeamDiNucRef, isRightOverlap, seqErrMatch, seqErrMis, queryKey);
+                        if (deleteTargetSeq) {
+                            delete[] tSeq;
+                        }
+                    }
+                    reads.push_back(alignments[alnIdx]);
                 }
             }
             alignments.clear();
 
 
             // Iterating through all alignments per query
-            for ( size_t targ = 0; targ < contigs.size(); targ++){   
+            for ( size_t targ = 0; targ < reads.size(); targ++){   
                 
-                Matcher::result_t target = contigs[targ];
+                Matcher::result_t target = reads[targ];
                 
                 unsigned int targetId = sequenceDbr->getId(target.dbKey);
                 char *tarSeq = sequenceDbr->getData(targetId, thread_idx);
                 char *tSeq;
-
-                bool isContig = sequenceDbr->getExtData(targetId);
-                float seqIdThresh = minSeqIdReads;
-                if (isContig == true) {
-                    seqIdThresh = (2.0f + seqIdThresh) / 3.0f;
-                }
 
                 // new in CarpeDeam12: only correct with sequences that are potentially also extensions
                 const bool notRightStartAndLeftStart = !(target.dbStartPos == 0 && target.qStartPos == 0 );
                 const bool rightStart = target.dbStartPos == 0 && (target.dbEndPos != static_cast<int>(target.dbLen)-1);
                 const bool leftStart = target.qStartPos == 0   && (target.qEndPos != static_cast<int>(target.qLen)-1);
                 const bool isNotIdentity = (target.dbKey != queryKey);
+                // const bool notRightStartAndLeftStart = 1;
+                // const bool rightStart = 1;
+                // const bool leftStart = 1;
+                // const bool isNotIdentity = 1;
 
                 const bool targetWasExt = sequenceDbr->getExtData(targetId);
 
@@ -524,8 +601,8 @@ int doCorrection(LocalParameters &par) {
                 float ryId = getRYSeqId(target, querySeq,  tSeq, ryMap);
                 target.rySeqId = ryId;
 
-                //if ( targetWasExt == false && isNotIdentity && target.rySeqId >= rymerThresh && target.seqId >= seqIdThresh && target.alnLength >= 30 && ){
-                if ( targetWasExt == false && isNotIdentity && target.rySeqId >= rymerThresh && target.seqId >= seqIdThresh && target.alnLength >= 30 && (rightStart || leftStart) && notRightStartAndLeftStart && isNotIdentity ) {
+                //if ( targetWasExt == false && isNotIdentity && target.rySeqId >= rymerThresh && target.seqId >= par.seqIdThr && target.alnLength >= 30 && ){
+                if ( targetWasExt == false && isNotIdentity && target.rySeqId >= rymerThresh && target.seqId >= par.seqIdThr && target.alnLength >= 30 && (rightStart || leftStart) && notRightStartAndLeftStart && isNotIdentity ) {
 
                     //std::cerr << ">" << target.dbKey << std::endl;
                     //std::cerr << tSeq; 
@@ -613,9 +690,33 @@ int doCorrection(LocalParameters &par) {
             corrStr.push_back('\n');
             delete[] corrQuery;
 
-            //if ( queryKey == 1250638 )
-            if ( false )
-            {
+
+#ifdef DEBUG_CORR
+        #pragma omp critical
+        {
+            std::string outputLine = std::to_string(queryKey) + "\t";
+
+            std::ostringstream oss;
+            for (unsigned int i = 0; i < totalCov.size(); i++) {
+                oss << totalCov[i];
+                if (i < totalCov.size() - 1) {
+                    oss << " ";
+                }
+            }
+
+            // Append the loop output to outputLine
+            outputLine += oss.str();
+            outputLine += "\n";
+
+            if (outputFileAll.is_open()) {
+                outputFileAll << outputLine;
+            }
+        }
+#endif
+
+            //if ( queryKey == 1250638 ){
+            //if ( queryKey == 4631784 ){
+            if ( false ){
                 std::cerr << ">Original\n" << querySeq;
                 std::cerr << ">Corrected\n" << corrStr;
                 std::cerr << "TotalCov:\n";

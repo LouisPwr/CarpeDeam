@@ -1,4 +1,5 @@
 #include "nuclassembleUtil.h"
+const double SMOOTHING_VALUE = 0.0000001;
 
 #ifdef OPENMP
 #include <omp.h>
@@ -157,49 +158,10 @@ float ancientMatchCount(Matcher::result_t res, char* querySeq, char* targetSeq, 
         //unsigned int subDeamLen = subDeamDiNuc.size();
         //const bool rightStart = res.dbStartPos == 0 && (res.dbEndPos != static_cast<int>(res.dbLen)-1);
         //const bool leftStart = res.qStartPos == 0   && (res.qEndPos != static_cast<int>(res.qLen)-1);
-
-        // // right overlap
-        // if ( rightStart ){
-        //     //std::cerr << "right start" << std::endl;
-        //     if ( pos < 5 ){
-        //         matchLik = subDeamDiNuc[pos].p[qBase][tBase];
-        //     }
-        //     else if ( pos >= res.dbLen - 5 ){
-        //         matchLik = subDeamDiNuc[subDeamLen - (res.alnLength - pos)].p[qBase][tBase];
-        //     }
-        //     else{
-        //         matchLik = subDeamDiNuc[5].p[qBase][tBase];
-        //     }
-        // }
-        // //left overlap
-        // else if ( leftStart ){
-        //     //std::cerr << "left start" << std::endl;
-        //     // Iterating over the alignment
-        //     if ( res.dbStartPos + pos < 5 ){
-        //         matchLik = subDeamDiNuc[res.dbStartPos + pos].p[qBase][tBase];
-        //     }
-        //     else if ( pos >= res.alnLength - 5 ){
-        //         matchLik = subDeamDiNuc[subDeamLen - (res.alnLength - pos)].p[qBase][tBase];
-        //     }
-        //     else{
-        //         matchLik = subDeamDiNuc[5].p[qBase][tBase];
-        //     }
-        // }
         matchLik = subDeamDiNuc[5].p[qBase][tBase];
 
         if ( dimerCT && matchLik > 0 ){
             mCT += deamMatches(res, scoreAln, matchLik);
-            // if ( matchLik > 0.01 ){
-            // float matches = ((static_cast<float>(scoreAln) + 3.0f*res.alnLength) / 5.0f) + mCT + mGA; // TODO: use match score from nucleotide.out
-            // float matchesWO = (static_cast<float>(scoreAln) + 3.0f*res.alnLength) / 5.0f; // TODO: use match score from nucleotide.out matrix
-            // float mOld = res.seqId * res.alnLength ;
-            // std::cerr << "matches new " << matches << std::endl;
-            // std::cerr << "matches without deam " << matchesWO << std::endl;
-            // std::cerr << "matches conservative " << mOld << std::endl; 
-            // std::cerr << "aln len " << res.alnLength << std::endl;
-            // std::cerr << "score of aln " << scoreAln << std::endl;
-            // std::cerr << "matchLik " << matchLik << std::endl;
-            // }
         }
         else if ( dimerGA && matchLik > 0 ){
             //std::cerr << "matchLik GA\t" << matchLik << std::endl;
@@ -343,32 +305,52 @@ void calc_likelihood(scorePerRes & scoredRes, char* querySeq, const char* target
             }
         }
 
-        // MATCH
-        if ( querySeq[scoredRes.r.qStartPos + t] == targetSeq[scoredRes.r.dbStartPos + t] )
-        {
-            for (int query = 0; query<4; query++)
-            {   
-                int t_base = nucleotideMap[targetSeq[scoredRes.r.dbStartPos + t]];
-                double match_lik = tProbs.p[query][t_base];
+        // // MATCH
+        // if ( querySeq[scoredRes.r.qStartPos + t] == targetSeq[scoredRes.r.dbStartPos + t] )
+        // {
+        //     for (int query = 0; query<4; query++)
+        //     {   
+        //         int t_base = nucleotideMap[targetSeq[scoredRes.r.dbStartPos + t]];
+        //         double match_lik = tProbs.p[query][t_base];
 
-                lik += match_lik * seqErrMatch.p[query][t_base];
+        //         lik += match_lik * seqErrMatch.p[query][t_base];
 
+        //     }
+        //     countMatch += 1;
+        // }
+        // // Mismatch
+        // else
+        // {
+        //     for (int query = 0; query<4; query++)
+        //     {   
+        //         int t_base = nucleotideMap[targetSeq[scoredRes.r.dbStartPos + t]];
+        //         double mm_lik = 0;
+
+        //         mm_lik = tProbs.p[query][t_base];
+        //         lik += mm_lik * seqErrMis.p[query][t_base];
+
+        //     }
+        //     countMismatch += 1;
+        // }
+
+
+        int qBase = nucleotideMap[queryOverlap[t]];
+        int tBase = nucleotideMap[targetOverlap[t]];
+        for (int query = 0; query<4; query++){
+            // seq error in obs. qBase:
+            long double qBaseErr = 0;
+            qBaseErr = seqErrMatch.p[query][qBase];
+
+            for (int target = 0; target<4; target++){
+                double match_lik = std::max(static_cast<long double>(SMOOTHING_VALUE), tProbs.p[query][target]);
+
+                // seq error in obs. tBase:
+                long double tBaseErr = 0;
+                tBaseErr = seqErrMatch.p[target][tBase];
+
+                //lik_one += std::exp(std::log(baseFreqs[query])+std::log(qBaseErr)+std::log(tBaseErr)+std::log(match_lik));
+                lik += qBaseErr * tBaseErr * match_lik;
             }
-            countMatch += 1;
-        }
-        // Mismatch
-        else
-        {
-            for (int query = 0; query<4; query++)
-            {   
-                int t_base = nucleotideMap[targetSeq[scoredRes.r.dbStartPos + t]];
-                double mm_lik = 0;
-
-                mm_lik = tProbs.p[query][t_base];
-                lik += mm_lik * seqErrMis.p[query][t_base];
-
-            }
-            countMismatch += 1;
         }
 
     likMod += log(lik);
@@ -433,27 +415,253 @@ void calc_likelihood(scorePerRes & scoredRes, char* querySeq, const char* target
 
 } // END loop through each base
 
-// void createNoDamageMatrix(const std::string& filename) {
-//     std::ofstream file(filename);
 
-//     if (!file.is_open()) {
-//         std::cerr << "Error opening file: " << filename << std::endl;
-//         return;
-//     }
 
-//     // Header row
-//     file << "A>C\tA>G\tA>T\tC>A\tC>G\tC>T\tG>A\tG>C\tG>T\tT>A\tT>C\tT>G\n";
+void calc_likelihood_correction(Matcher::result_t candidate, char* querySeq, const char* targetSeq, std::vector<diNucleotideProb> & subDeamDiNuc, bool isRightOverlap, diNucleotideProb & seqErrMatch, diNucleotideProb & seqErrMis, unsigned int qKey)
+{
+    //std::vector<float> baseFreqs = { 0.23554, 0.26446, 0.26446, 0.23554 };
 
-//     // Matrix rows
-//     for (int i = 0; i < 5; ++i) {
-//         for (int j = 0; j < 11; ++j) {
-//             file << "0.0\t";
-//         }
-//         file << "0.0\n"; // Last element in the row without a trailing tab
-//     }
+    unsigned int countMatch = 0;
+    unsigned int countMismatch = 0;
 
-//     file.close();
-// }
+    // Extract the query and target sequences
+    std::string queryOverlap;
+    for ( int i = candidate.qStartPos; i <= candidate.qEndPos; i++ )
+    {
+        queryOverlap += querySeq[i];
+    }
+
+    std::string targetOverlap;
+    for ( int i = candidate.dbStartPos; i <= candidate.dbEndPos; i++ )
+    {
+        targetOverlap += targetSeq[i];
+    }
+
+    // Compare the sequences and print them if they're not identical
+    /* if (queryOverlap != targetOverlap)
+    {
+        std::cerr << "isReverse: " << scoredRes.r.isRevToAlignment << std::endl;
+        std::cerr << "Query Overlap: " << queryOverlap << std::endl;
+        std::cerr << "targetSeq Overlap: " << targetOverlap << "\n" << std::endl;
+    } */
+
+    // Here we start calculating the likelihood for a >>> S I N G L E <<< alignment
+    double likMod = 0.0; //used to save sum of all log_lik_r1
+    double likMod1 = 0.0; //used to save sum of all log_lik_r1
+    double likMod2 = 0.0; //used to save sum of all log_lik_r1
+
+    std::unordered_map<char, int> nucleotideMap = {
+    {'A', 0},
+    {'C', 1},
+    {'G', 2},
+    {'T', 3}};
+
+
+    // std::vector<diNucleotideProb> subdeam_lookup(candidate.qLen);
+
+    // // Create lookup vector
+    // for (size_t i = 0; i < 5; ++i) {
+    //     subdeam_lookup[i] = subDeamDiNuc[i];
+    // }
+    // for (size_t i = 5; i < candidate.qLen - 5; ++i) {
+    //     subdeam_lookup[i] = subDeamDiNuc[5];
+    // }
+    // for (size_t i = 0; i < 5; ++i) {
+    //     subdeam_lookup[candidate.qLen - 5 + i] = subDeamDiNuc[ 6 + i];
+    // }
+
+
+    //You either have a match or a mismatch
+    for ( unsigned int t = 0; t < candidate.alnLength; t++ )
+    {   
+        double lik_one = 0;
+        double lik_two = 0;
+        unsigned int subDeamLen = subDeamDiNuc.size();
+
+        diNucleotideProb tProbs;
+
+        // for both left and right extension as the matrices were rotated accordingly before this function is called
+
+        // We know that the overlap is always at least k-long (i.e. 22)
+        // This can be changed to a better/more efficient solution once we know it works!
+
+        if ( isRightOverlap )
+        {
+            if ( t < 5 )
+            {
+                tProbs = subDeamDiNuc[t];
+            }
+            else if ( t >= candidate.dbLen - 5 )
+            {
+                tProbs = subDeamDiNuc[subDeamLen - (candidate.alnLength - t)];
+            }
+            else
+            {
+                tProbs = subDeamDiNuc[5];
+            }
+        }
+        else
+        {
+            // left Extension
+            if ( candidate.dbStartPos + t < 5 )
+            {
+                tProbs = subDeamDiNuc[candidate.dbStartPos + t];
+            }
+            else if ( t >= candidate.alnLength - 5 )
+            {
+                tProbs = subDeamDiNuc[subDeamLen - (candidate.alnLength - t)];
+            }
+            else{
+                tProbs = subDeamDiNuc[5];
+            }
+        }
+
+        // first sequence is reference
+
+        int qBase = nucleotideMap[queryOverlap[t]];
+        int tBase = nucleotideMap[targetOverlap[t]];
+
+        // if ( qKey == 4631784 ){
+        //     std::cerr << "lik 1" << std::endl;
+        //     std::cerr << "q_overlap\t" << queryOverlap << std::endl;
+        //     std::cerr << "t_overlap\t" << targetOverlap << std::endl;
+        // }
+
+        if ( tBase != qBase ){
+            for (int query = 0; query<4; query++){
+                // seq error in obs. qBase:
+                long double qBaseErr = 0;
+                qBaseErr = seqErrMatch.p[query][qBase];
+
+                for (int target = 0; target<4; target++){
+                    double match_lik = std::max(static_cast<long double>(SMOOTHING_VALUE), tProbs.p[query][target]);
+
+                    // seq error in obs. tBase:
+                    long double tBaseErr = 0;
+                    tBaseErr = seqErrMatch.p[target][tBase];
+
+                    // // Print variable names and values before updating likMod
+                    // if ( qKey == 4631784 ){
+                    // std::cerr << "qBase\ttBase\tquery\ttarget\tqBaseErr\ttBaseErr\tmatch_lik\n";
+                    // std::cerr << qBase << "\t" << tBase << "\t" << query << "\t" << target << "\t" 
+                    //         << std::fixed << std::setprecision(10) << qBaseErr << "\t" 
+                    //         << tBaseErr << "\t" << match_lik << "\n";
+                    // }
+
+                    //lik_one += std::exp(std::log(baseFreqs[query])+std::log(qBaseErr)+std::log(tBaseErr)+std::log(match_lik));
+                    lik_one += std::exp(std::log(qBaseErr)+std::log(tBaseErr)+std::log(match_lik));
+
+                }
+            }
+        }
+        else{
+            lik_one += 1;
+        }
+
+        if (tBase == qBase){
+            countMatch++;
+        }
+        else{
+            countMismatch++;
+        }
+
+        // second sequence is reference
+        // int tBase2 = nucleotideMap[queryOverlap[t]];
+        // int qBase2 = nucleotideMap[targetOverlap[t]];
+
+        // if ( qKey == 4631784 ){
+        //     std::cerr << "lik 2" << std::endl;
+        //     std::cerr << "q_overlap\t" << queryOverlap << std::endl;
+        //     std::cerr << "t_overlap\t" << targetOverlap << std::endl;
+        // }
+
+        // if (tBase2 == qBase2){
+        //     countMatch++;
+        // }
+        // else{
+        //     countMismatch++;
+        // }
+
+        // if ( tBase2 != qBase2){
+        //     for (int query = 0; query<4; query++){
+        //         // seq error in obs. qBase2:
+        //         long double qBaseErr = 0;
+        //         qBaseErr = seqErrMatch.p[query][qBase2];
+
+        //         for (int target = 0; target<4; target++){
+
+        //             double match_lik = std::max(static_cast<long double>(SMOOTHING_VALUE), tProbs.p[query][target]);
+
+        //             // seq error in obs. tBase:
+        //             long double tBaseErr = 0;
+        //             tBaseErr = seqErrMatch.p[target][tBase2];
+
+        //             // Print variable names and values before updating likMod
+        //             // if ( qKey == 4631784 ){
+        //             //     std::cerr << "qBase2\ttBase2\tquery\ttarget\tqBaseErr\ttBaseErr\tmatch_lik\n";
+        //             //     std::cerr << qBase2 << "\t" << tBase2 << "\t" << query << "\t" << target << "\t" 
+        //             //     << std::fixed << std::setprecision(10) << qBaseErr << "\t" 
+        //             //     << tBaseErr << "\t" << match_lik << "\n";
+        //             // }
+        //             //lik_one += std::exp(std::log(baseFreqs[query])+std::log(qBaseErr)+std::log(tBaseErr)+std::log(match_lik));
+        //             //lik_two += std::exp(std::log(baseFreqs[query])+std::log(qBaseErr)+std::log(tBaseErr)+std::log(match_lik));
+        //             lik_two += std::exp(std::log(0.25)+std::log(qBaseErr)+std::log(tBaseErr)+std::log(match_lik));
+
+        //         }
+        //     }
+        // }
+        // else{
+        //     lik_two += (0.999*0.999*0.25);
+        // }
+
+        likMod += lik_one;
+        //likMod += (0.5 * lik_one);
+        // likMod += (0.5 * lik_two);
+        //likMod1 += lik_one;
+        //likMod2 += lik_two;
+
+    }
+
+    unsigned int k_len = candidate.alnLength;
+    double likAlnLen = likMod/k_len;
+    //double likAlnLen = 4 * (likMod/k_len);
+    //likMod1 = 4 * (likMod1/k_len);
+    //likMod2 = 4 * (likMod2/k_len);
+
+
+    float insideSeqId = getSubSeqId(candidate, querySeq, targetSeq);
+
+    if (false)
+    //if ( qKey == 4631784 )
+    //if ( randAln > likMod )
+    {
+        std::cerr << "\n";
+        std::cerr << "q_full\t" << querySeq << std::endl;
+        std::cerr << "t_full\t" << targetSeq << std::endl;
+        std::cerr << "q_overlap\t" << queryOverlap << std::endl;
+        std::cerr << "t_overlap\t" << targetOverlap << std::endl;
+        std::cerr << "seqId:\t" << candidate.seqId << std::endl;
+        std::cerr << "subSeqId:\t" << insideSeqId << std::endl;
+        std::cerr << "rySeqId:\t" << candidate.rySeqId << std::endl;
+        std::cerr << "likMod:\t" << likAlnLen << std::endl;
+        std::cerr << "likMod1:\t" << likMod1 << std::endl;
+        std::cerr << "likMod2:\t" << likMod2 << std::endl;
+        std::cerr << "M and MM:\t" << countMatch << "\t" << countMismatch << std::endl;
+        std::cerr << "TdbKey,Tlen:\t" << candidate.dbKey << "\t" << candidate.dbLen << std::endl;
+        std::cerr << "query length:\t" << candidate.qLen << std::endl;
+        // std::cerr << "spurious:\t" << likSpurious << std::endl;
+        // std::cerr << "ratio space" << std::endl;
+        // std::cerr << "ratio lik/(lik+random):\t" << ratioLog << std::endl;
+        std::cerr << "alnLen:\t" << candidate.alnLength << std::endl;
+        //std::cerr << "ratio penal lik/(lik+random)  " << ratioLog2  << "  " << exp(ratioLog2) << std::endl;
+        std::cerr << "\n";
+    }    
+
+    // Now decide if we should correct or not
+
+} // END loop through each base
+
+
 
 void initDeamProbabilities(const std::string & deam5pfreqE,const std::string & deam3pfreqE, std::vector<substitutionRates> & sub5p, std::vector<substitutionRates> & sub3p, std::vector<diNucleotideProb> & allDeam, std::vector<diNucleotideProb> & revAllDeam){
 

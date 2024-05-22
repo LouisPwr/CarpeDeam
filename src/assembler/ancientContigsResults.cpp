@@ -19,7 +19,7 @@
 #include <omp.h>
 #endif
 
-//#define DEBUGCOV
+#define DEBUGCOV
 
 
 class CompareNuclResultByScoreContigs {
@@ -114,42 +114,6 @@ Matcher::result_t selectNuclFragmentToExtendContigs(QueueByScoreNuclContigs &ali
     }
     return Matcher::result_t(UINT_MAX,0,0,0,0,0,0,0,0,0,0,0,0,"");
 }
-
-
-
-
-
-// std::vector<Matcher::result_t> getCandidates(const QueueByScoreNuclContigs& queue, bool leftOrRight, unsigned int querySeqLength) {
-//     // Make a copy of the priority queue
-//     QueueByScoreNuclContigs tempQueue = queue;
-//     std::vector<Matcher::result_t> topTwoCandi;
-
-
-//     while ( topTwoCandi.size() <= 2 || !tempQueue.empty() ){
-
-//         Matcher::result_t topCandi = tempQueue.top();
-
-//         unsigned int dbStartPos = topCandi.dbStartPos;
-//         unsigned int dbEndPos = topCandi.dbEndPos;
-//         unsigned int qStartPos = topCandi.qStartPos;
-//         unsigned int qEndPos = topCandi.qEndPos;
-
-//         // right extensions
-//         if ( leftOrRight && dbStartPos == 0 && qEndPos == (querySeqLength - 1)){
-//             topTwoCandi.push_back(tempQueue.top());
-//             tempQueue.pop();
-//         }
-
-//         // left extension
-//         if ( !leftOrRight && qStartPos == 0 && dbEndPos == (topCandi.dbLen - 1)){
-//             topTwoCandi.push_back(tempQueue.top());
-//             tempQueue.pop();
-//         }
-
-//     }
-     
-//     return topTwoCandi;
-// }
 
 
 
@@ -309,11 +273,11 @@ int doNuclAssembly2(LocalParameters &par) {
             //unsigned int extLen = 150;
 
             //set threshold when to declare an mge
-            float mgeSeqId = 0.9;
+            float mgeSeqId = 0.95;
             float mgeRySeqId = 0.99;
 
             //set number of bases in overlap to comapare after the alignment ends
-            unsigned int numBaseCompare = 250;
+            unsigned int numBaseCompare = 200;
 
             //counter for left and right extensions
             unsigned int countRightExt = 0;
@@ -575,6 +539,46 @@ int doNuclAssembly2(LocalParameters &par) {
             }
             alignments.clear();
 
+            // Iterate through all candidates and compare to the longest
+            for (unsigned int idx = 0; idx < contigs.size(); idx++){
+                // now retrieve the other candidate extensions and get their sequences
+
+                Matcher::result_t aln2update = contigs[idx];
+
+                unsigned int aln2updateId = sequenceDbr->getId(aln2update.dbKey);
+                unsigned int aln2updateLen = sequenceDbr->getSeqLen(aln2updateId);
+
+                if ( aln2updateId == queryKey ){
+                    continue;
+                }
+
+                char *aln2updateSequ = sequenceDbr->getData(aln2updateId, thread_idx);
+                std::string aln2updateSeq;
+
+                if (aln2update.isRevToAlignment) {
+                    // Convert the reversed fragment to std::string
+                    char *rightExtCandiSeqTmp = getNuclRevFragment(aln2updateSequ, aln2updateLen, (NucleotideMatrix *)subMat);
+                    aln2updateSeq = std::string(rightExtCandiSeqTmp, aln2updateLen);
+                    delete[] rightExtCandiSeqTmp;
+                } else {
+                    // Directly convert the raw sequence to std::string
+                    aln2updateSeq = std::string(aln2updateSequ, aln2updateLen);
+                }
+
+                // calculate the sequence identity
+                int idCnt = 0;
+                int idRyCnt = 0;
+                for (int i = aln2update.qStartPos; i < aln2update.qEndPos; i++) {
+                    idCnt += (querySeq[i] == aln2updateSeq[aln2update.dbStartPos + (i-aln2update.qStartPos)]) ? 1 : 0;
+                    idRyCnt += (ryMap[querySeq[i]] == ryMap[aln2updateSeq[aln2update.dbStartPos + (i-aln2update.qStartPos)]]) ? 1 : 0;
+                }
+                float seqId = static_cast<float>(idCnt) / querySeqLen;
+                float rySeqId = static_cast<float>(idRyCnt) / querySeqLen;
+
+                aln2update.seqId = seqId;
+                aln2update.rySeqId = rySeqId;
+            }
+
 
             // fill queue
             for (size_t alnIdx = 0; alnIdx < contigs.size(); alnIdx++) {
@@ -709,9 +713,8 @@ int doNuclAssembly2(LocalParameters &par) {
                         }
 #endif
 
-                    bool solidRightExt = !(countRightExt == 1 && besttHitToExtend.alnLength <= 50);
-                    bool solidLeftExt = !(countLeftExt == 1 && besttHitToExtend.alnLength <= 50);
-
+                    bool solidRightExt = !(countRightExt == 1 && besttHitToExtend.alnLength <= 100);
+                    bool solidLeftExt = !(countLeftExt == 1 && besttHitToExtend.alnLength <= 100);
 
                     if (dbStartPos == 0 && qEndPos == (querySeqLen - 1) && solidRightExt) {
                         //right extension
@@ -774,6 +777,10 @@ int doNuclAssembly2(LocalParameters &par) {
                     }
 #endif
 
+                    // to test
+                    if ( queryKey == 3498089 ){
+                        std::cerr << "solidRight?:\t" << solidRightExt << "\t" <<  "countRightExt" << "\t" << countRightExt << "\t" << "alnLen\t" << besttHitToExtend.alnLength << std::endl;
+                    }
                         //update that dbKey was used in assembly
                         __sync_or_and_fetch(&wasExtended[targetId], static_cast<unsigned char>(0x80));
 
@@ -838,6 +845,10 @@ int doNuclAssembly2(LocalParameters &par) {
                         }
                     }
 #endif
+                    // to test
+                    if ( queryKey == 3498089 ){
+                        std::cerr << "solidLeftExt?:\t" << solidLeftExt << "\t" <<  "countLeftExt" << "\t" << countLeftExt << "\t" << "alnLen\t" << besttHitToExtend.alnLength << std::endl;
+                    }
                         //update that dbKey was used in assembly
                         __sync_or_and_fetch(&wasExtended[targetId], static_cast<unsigned char>(0x80));
                     }
@@ -851,6 +862,10 @@ int doNuclAssembly2(LocalParameters &par) {
 
                 querySeqLen = query.length();
                 querySeq = (char *) query.c_str();
+    
+                // Re-initilaize the extension count
+                countRightExt = 0;
+                countLeftExt = 0;
 
                 // update alignments
                 for(size_t alnIdx = 0; alnIdx < tmpAlignments.size(); alnIdx++) {
@@ -881,9 +896,48 @@ int doNuclAssembly2(LocalParameters &par) {
                         float ancientMatches = ancientMatchCount(tmpAlignments[alnIdx], querySeq, tSeq, subDeamDiNucRef, nucleotideMap);
                         tmpAlignments[alnIdx].deamMatch = ancientMatches;
                         alnQueue.push(tmpAlignments[alnIdx]);
+
+                        size_t tmpDbKey = tmpAlignments[alnIdx].dbKey;
+                        const bool notRightStartAndLeftStart = !(tmpAlignments[alnIdx].dbStartPos == 0 && tmpAlignments[alnIdx].qStartPos == 0 );
+                        const bool rightStart = tmpAlignments[alnIdx].dbStartPos == 0 && (tmpAlignments[alnIdx].dbEndPos != static_cast<int>(tmpAlignments[alnIdx].dbLen)-1);
+                        const bool leftStart = tmpAlignments[alnIdx].qStartPos == 0 && (tmpAlignments[alnIdx].qEndPos != static_cast<int>(tmpAlignments[alnIdx].qLen)-1);
+                        const bool isNotIdentity = (tmpDbKey != queryKey);
+
+                        // distinguish between right and left here
+                        unsigned int dbStartPos = tmpAlignments[alnIdx].dbStartPos;
+                        unsigned int dbEndPos = tmpAlignments[alnIdx].dbEndPos;
+                        unsigned int qStartPos = tmpAlignments[alnIdx].qStartPos;
+                        unsigned int qEndPos = tmpAlignments[alnIdx].qEndPos;               
+
+                        if ((rightStart || leftStart) && notRightStartAndLeftStart && isNotIdentity){
+
+                            // count ALL right and left extensions; needed for pseudo stable kmer filter
+                            if (dbStartPos == 0 && qEndPos == (querySeqLen - 1)) {
+                                // right extension
+                                countRightExt++; 
+                            // to test
+                            if ( queryKey == 3498089 ){
+                                std::cerr << "countRightExt" << "\t" << countRightExt << "\t" << "alnLen\t" << besttHitToExtend.alnLength << std::endl;
+                            }
+                            }
+                            else if (qStartPos == 0 && dbEndPos == (tmpAlignments[alnIdx].dbLen - 1)) {
+                                // left extension
+                                countLeftExt++;
+                            // to test
+                            if ( queryKey == 3498089 ){
+                                std::cerr << "countLeftExt" << "\t" << countLeftExt << "\t" << "alnLen\t" << besttHitToExtend.alnLength << std::endl;
+                            }
+                            }
+                        }
+
                     }
                         
-                }
+                }                    
+                    // to test
+                    if ( queryKey == 3498089 ){
+                        std::cerr <<  "countRightExt" << "\t" << countRightExt << "\t" << "alnLen\t" << besttHitToExtend.alnLength << std::endl;
+                        std::cerr << "countLeftExt" << "\t" << countLeftExt << "\t" << "alnLen\t" << besttHitToExtend.alnLength << std::endl;
+                    }
             }
 
             if (queryCouldBeExtended)  {

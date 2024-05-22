@@ -31,7 +31,6 @@ void setGuidedNuclAssemblerWorkflowDefaults(LocalParameters *p) {
     // cluster defaults for redundancy reduction
     p->covMode = 1;
     p->clustSeqIdThr = 0.97;
-    p->clustRySeqIdThr = 0;
     p->clustCovThr = 0.99;
     p->clusteringMode = 2;
     p->gapOpen = 5;
@@ -177,7 +176,6 @@ int guidedNuclAssemble(int argc, const char **argv, const Command &command) {
 
     // set mandatory values for redundancy reduction
     par.seqIdThr = par.clustSeqIdThr;
-    par.rySeqIdThr = par.clustRySeqIdThr;
     // par.kmerSize = par.kmer;
     par.covThr = par.clustCovThr;
     par.wrappedScoring = true;

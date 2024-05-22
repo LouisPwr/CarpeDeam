@@ -1,8 +1,8 @@
 #include "nuclassembleUtil.h"
 
-//#define DEBUGEXT
+#define DEBUGEXT
 
-//#define LIKELI
+#define LIKELI
 
 std::vector<unsigned int> getMaxAlnLen(std::vector<Matcher::result_t> &alignments, unsigned int & queryKey)
 {
@@ -137,13 +137,16 @@ int doNuclAssembly1(LocalParameters &par) {
 #ifdef DEBUGEXT
     auto currentTime = std::chrono::system_clock::now();
     std::time_t time = std::chrono::system_clock::to_time_t(currentTime);
-    // std::stringstream one;
-    // one << "covs_all_" << time << ".tsv";
-    // std::string filenameOne = one.str();
+    std::stringstream one;
+    one << "likelihood_all_" << time << ".tsv";
+    std::string filenameOne = one.str();
 
     std::stringstream two;
     two << "ext_reads_" << time << ".tsv";
     std::string filenameTwo = two.str();
+
+    std::ofstream outputFileOne;  // Declare the ofstream object globally if possible
+    outputFileOne.open(filenameOne, std::ios::app);  // Open once, append mode
 
     std::ofstream outputFileTwo;  // Declare the ofstream object globally if possible
     outputFileTwo.open(filenameTwo, std::ios::app);  // Open once, append mode
@@ -185,31 +188,6 @@ int doNuclAssembly1(LocalParameters &par) {
         //std::cerr << "Before initDeamProbabilities" << std::endl;
         initDeamProbabilities(high5, high3, sub5p, sub3p, subDeamDiNuc, subDeamDiNucRev);
 
-        // scale "min sequence identity threshold" for read extension based on maximum damage.
-        // Initialize maxDamage
-        long double maxDamage = 0;
-        // Iterate through the vector to find maxDamage
-        for (const auto& diNuc : subDeamDiNuc) {
-            // Check specific elements as per your logic
-            maxDamage = std::max(maxDamage, diNuc.p[1][3]);
-            maxDamage = std::max(maxDamage, diNuc.p[2][0]);
-        }
-        
-        float minSeqIdReads = par.seqIdThr;
-
-        if (par.seqIdThr < 0.95) {
-            minSeqIdReads = 0.95; // Default value if maxDamage <= 0.2
-            if (maxDamage >= 0.275) {
-                minSeqIdReads = par.seqIdThr;
-            } else if (maxDamage >= 0.2) { // This means maxDamage is between 0.2 and 0.3
-                // Scale linearly between 0.9 and 0.95. The formula for linear scaling is:
-                // minId = startValue + (endValue - startValue) * (currentValue - minValue) / (maxValue - minValue)
-                // Here, we map the scale such that 0.2 maps to 0.95 and 0.3 maps to 0.9
-                minSeqIdReads = 0.95 - (0.95 - par.seqIdThr) * (maxDamage - 0.2) / (0.275 - 0.2);
-            }
-        }
-        
-
         diNucleotideProb seqErrMatch;
         diNucleotideProb seqErrMis;
 
@@ -217,34 +195,6 @@ int doNuclAssembly1(LocalParameters &par) {
         getSeqErrorProf(seqErrMatch, seqErrMis, seqErrCorrection);
 
         float randAlnPenal = par.randomAlignPenal;
-
-        #ifdef LIKELI
-        // For plotting likelihoods
-        auto currentTime = std::chrono::system_clock::now();
-        std::time_t time = std::chrono::system_clock::to_time_t(currentTime);
-
-        std::stringstream one;
-        one << "ID1l_" << time << ".tsv";
-        std::string filenameOne = one.str();
-
-        std::stringstream two;
-        two << "ID1r_" << time << ".tsv";
-        std::string filenameTwo = two.str();
-
-        std::stringstream three;
-        three << "score1l_" << time << ".tsv";
-        std::string filenameThree = three.str();
-
-        std::stringstream four;
-        four << "score1r_" << time << ".tsv";
-        std::string filenameFour = four.str();
-        std::vector<unsigned int> ID_1l;
-        std::vector<std::vector<double>> score_1l;
-
-        std::vector<unsigned int> ID_1r;
-        std::vector<std::vector<double>> score_1r;
-        // For plotting likelihoods over
-        #endif
 
 
 #pragma omp for schedule(dynamic, 100)
@@ -316,6 +266,48 @@ int doNuclAssembly1(LocalParameters &par) {
                     notContig.push_back(alignments[alnIdx]);
                 }
             }
+            alignments.clear();
+
+            // update sequence identity
+            // Iterate through all candidates and compare to the longest
+            for (unsigned int idx = 0; idx < notContig.size(); idx++){
+                // now retrieve the other candidate extensions and get their sequences
+
+                Matcher::result_t aln2update = notContig[idx];
+
+                unsigned int aln2updateId = sequenceDbr->getId(aln2update.dbKey);
+                unsigned int aln2updateLen = sequenceDbr->getSeqLen(aln2updateId);
+
+                if ( aln2updateId == queryKey ){
+                    continue;
+                }
+
+                char *aln2updateSequ = sequenceDbr->getData(aln2updateId, thread_idx);
+                std::string aln2updateSeq;
+
+                if (aln2update.isRevToAlignment) {
+                    // Convert the reversed fragment to std::string
+                    char *rightExtCandiSeqTmp = getNuclRevFragment(aln2updateSequ, aln2updateLen, (NucleotideMatrix *)subMat);
+                    aln2updateSeq = std::string(rightExtCandiSeqTmp, aln2updateLen);
+                    delete[] rightExtCandiSeqTmp;
+                } else {
+                    // Directly convert the raw sequence to std::string
+                    aln2updateSeq = std::string(aln2updateSequ, aln2updateLen);
+                }
+
+                // calculate the sequence identity
+                int idCnt = 0;
+                int idRyCnt = 0;
+                for (int i = aln2update.qStartPos; i < aln2update.qEndPos; i++) {
+                    idCnt += (querySeq[i] == aln2updateSeq[aln2update.dbStartPos + (i-aln2update.qStartPos)]) ? 1 : 0;
+                    idRyCnt += (ryMap[querySeq[i]] == ryMap[aln2updateSeq[aln2update.dbStartPos + (i-aln2update.qStartPos)]]) ? 1 : 0;
+                }
+                float seqId = static_cast<float>(idCnt) / querySeqLen;
+                float rySeqId = static_cast<float>(idRyCnt) / querySeqLen;
+
+                aln2update.seqId = seqId;
+                aln2update.rySeqId = rySeqId;
+            }
 
             // Plan for dividing the extension:
             // 1. If target == read -> do damage aware extension
@@ -352,11 +344,44 @@ int doNuclAssembly1(LocalParameters &par) {
                 const bool rightStart = notContig[alnIdx].dbStartPos == 0;
                 const bool leftStart = notContig[alnIdx].qStartPos == 0;
                 const bool isNotIdentity = (notContig[alnIdx].dbKey != queryKey);
+                const bool notRightStartAndLeftStart = !(notContig[alnIdx].dbStartPos == 0 && notContig[alnIdx].qStartPos == 0 );
 
-                if ( (rightStart || leftStart) && notInside && isNotIdentity && notContig[alnIdx].rySeqId >= par.rySeqIdThr && notContig[alnIdx].seqId >= minSeqIdReads )
+
+#ifdef DEBUGEXT
+                    std::string outputLine = std::to_string(queryKey) + "\t" +
+                                                std::to_string(querySeqLen) + "\t" +
+                                                std::to_string(par.likelihoodThreshold) + "\t" +
+                                                std::to_string(notContig[alnIdx].seqId) + "\t" +
+                                                std::to_string(notContig[alnIdx].rySeqId) + "\t" +
+                                                std::to_string(notInside) + "\t" +
+                                                std::to_string(rightStart) + "\t" +
+                                                std::to_string(leftStart) + "\t" +
+                                                std::to_string(isNotIdentity) + "\t" +
+                                                std::to_string(notRightStartAndLeftStart) + "\n";
+
+                        #pragma omp critical
+                        {
+                            if (outputFileOne.is_open()) {
+                                outputFileOne << outputLine;
+                            }
+                        }
+#endif
+
+                if ( (rightStart || leftStart) && notInside && isNotIdentity && notContig[alnIdx].rySeqId >= par.rySeqIdThr && notContig[alnIdx].seqId >= par.seqIdThr)
                 {
-                    //std::cerr << "a" << std::endl;
                     scorePerRes toAdd = r_s_pair(notContig[alnIdx], querySeq, targetSeq, subDeamDiNuc, subDeamDiNucRev, maxAlnLeft, maxAlnRight, randAlnPenal, seqErrMatch, seqErrMis, par.excessPenal);
+
+#ifdef DEBUGEXT
+                    std::string outputLine = std::to_string(toAdd.sRatio) + "\t" +
+                                                std::to_string(toAdd.sLenNorm) + "\n";
+                    #pragma omp critical
+                    {
+                        if (outputFileOne.is_open()) {
+                            outputFileOne << outputLine;
+                        }
+                    }
+#endif
+
                     if ( toAdd.sRatio > par.likelihoodThreshold ) {
                         alnQueueReads.push( toAdd );
                     }
@@ -371,8 +396,6 @@ int doNuclAssembly1(LocalParameters &par) {
             tmpAlignmentsReads.reserve(notContig.size());
             // Louis was here
             //unsigned int alignment_counter = 0;
-
-            ////std::cerr << "Alignments size: " << alignments.size() << std::endl; 
 
             while (!alnQueueReads.empty()) {
 
@@ -581,7 +604,7 @@ int doNuclAssembly1(LocalParameters &par) {
                     const bool leftStart = tmpAlignmentsReads[alnIdx].qStartPos == 0;
                     const bool isNotIdentity = (tmpAlignmentsReads[alnIdx].dbKey != queryKey);
 
-                    if(tmpAlignmentsReads[alnIdx].seqId >= minSeqIdReads && (rightStart || leftStart) && isNotIdentity && notInside)
+                    if(tmpAlignmentsReads[alnIdx].seqId >= par.seqIdThr && (rightStart || leftStart) && isNotIdentity && notInside)
                         {
                             unsigned int tId = sequenceDbr->getId(tmpAlignmentsReads[alnIdx].dbKey);
                             char *tSeq = sequenceDbr->getData(tId, thread_idx);
@@ -615,54 +638,6 @@ int doNuclAssembly1(LocalParameters &par) {
             //contig.clear();
             notContig.clear();
         }
-
-
-# ifdef LIKELI
-// Writing everything to files
-std::ofstream outputFileOne(filenameOne); // Open the file for writing
-if (outputFileOne.is_open()) {
-    for (const auto& a : ID_1l) {
-        outputFileOne << a << "\n";
-    }
-    outputFileOne.close(); // Close the file
-}
-
-std::ofstream outputFileTwo(filenameTwo); // Open the file for writing
-if (outputFileTwo.is_open()) {
-    for (const auto& b : ID_1r) {
-        outputFileTwo << b << "\n";
-    }
-    outputFileTwo.close(); // Close the file
-}
-
-std::ofstream outputFileThree(filenameThree); // Open the file for writing
-if (outputFileThree.is_open()) {
-    for (const auto& innerVec : score_1l) {
-        for (const auto& value : innerVec) {
-            outputFileThree << value << "\t";
-        }
-        outputFileThree << "\n";
-    }
-    outputFileThree.close(); // Close the file
-}
-
-
-std::ofstream outputFileFour(filenameFour); // Open the file for writing
-if (outputFileFour.is_open()) {
-    for (const auto& innerVec : score_1r) {
-        for (const auto& value : innerVec) {
-            outputFileFour << value << "\t";
-        }
-        outputFileFour << "\n";
-    }
-    outputFileFour.close(); // Close the file
-}
-
-ID_1l.clear();
-score_1l.clear();
-ID_1r.clear();
-score_1r.clear();
-# endif 
 
 
 } // end parallel
