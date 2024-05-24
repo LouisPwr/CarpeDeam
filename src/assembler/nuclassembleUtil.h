@@ -48,7 +48,7 @@ typedef struct {
 void updateNuclAlignment(Matcher::result_t &tmpAlignment, DistanceCalculator::LocalAlignment &alignment,
                                 const char *querySeq, size_t querySeqLen, const char *tSeq, size_t tSeqLen);
 
-void getSeqErrorProf(diNucleotideProb & seqErrMatch, diNucleotideProb & seqErrMis, long double err);
+void getSeqErrorProf(diNucleotideProb & seqErrMatch, long double err);
 
 static void readNucSubstitionRatesFreq(const string filename,vector<substitutionRates> & subVec){
     igzstream subFP;
@@ -124,9 +124,9 @@ char* getNuclRevFragment(char* fragment, size_t fragLen, NucleotideMatrix *nuclM
 
 float getRYSeqId(Matcher::result_t & res, char* querySeq,  char* targetSeq, std::unordered_map<char, int> & mapACGT);
 
-void calc_likelihood(scorePerRes & scoredRes, char* querySeq, const char* targetSeq, std::vector<diNucleotideProb> & subDeamDiNuc, unsigned int maxAln, bool isRightOverlap, float randAlnPenal, diNucleotideProb & seq_err_match, diNucleotideProb & seq_err_mis, float excessPenal);
+void calc_likelihood(scorePerRes & scoredRes, char* querySeq, const char* targetSeq, std::vector<diNucleotideProb> & subDeamDiNuc, unsigned int maxAln, float randAlnPenal, diNucleotideProb & seq_err_match, float excessPenal);
 
-void calc_likelihood_correction(Matcher::result_t candidate, char* querySeq, const char* targetSeq, std::vector<diNucleotideProb> & subDeamDiNuc, bool isRightOverlap, diNucleotideProb & seqErrMatch, diNucleotideProb & seqErrMis, unsigned int qKey);
+void calc_likelihood_correction(Matcher::result_t candidate, char* querySeq, const char* targetSeq, std::vector<diNucleotideProb> & subDeamDiNuc, diNucleotideProb & seqErrMatch, unsigned int qKey);
 
 int doNuclAssembly1(LocalParameters &par);
 

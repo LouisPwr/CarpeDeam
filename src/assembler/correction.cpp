@@ -3,7 +3,7 @@ const double SMOOTHING_VALUE = 0.0000001;
 
 #define DEBUG_CORR
 
-int mostLikeliBaseRead(int qIter, diNucleotideProb & match, diNucleotideProb & mismatch, std::vector<countDeamCov> & deamVec, std::vector<countDeamCov> & countRevs, std::vector<diNucleotideProb> & subDeamDiNuc, std::vector<diNucleotideProb> & subDeamDiNucRev)
+int mostLikeliBaseRead(int qIter, std::vector<countDeamCov> & deamVec, std::vector<countDeamCov> & countRevs, std::vector<diNucleotideProb> & subDeamDiNuc, std::vector<diNucleotideProb> & subDeamDiNucRev)
 {
     std::vector<double> baseLikelis; 
 
@@ -16,7 +16,7 @@ int mostLikeliBaseRead(int qIter, diNucleotideProb & match, diNucleotideProb & m
         //double qBaseLogLik = 0;
         for (int tBase=0; tBase < 4; tBase++)
         {
-            double seqLik = (qBase == tBase) ? match.p[qBase][tBase] : mismatch.p[qBase][tBase];
+            //double seqLik = (qBase == tBase) ? match.p[qBase][tBase] : mismatch.p[qBase][tBase];
 
             // The vector deamVec contains the counts of deaminations per position;
             // Iterating through it to make the amount of multiplications we need to do. 
@@ -25,13 +25,16 @@ int mostLikeliBaseRead(int qIter, diNucleotideProb & match, diNucleotideProb & m
                 double deamPattern = subDeamDiNuc[l].p[qBase][tBase];
                 double deamPatternRev = subDeamDiNucRev[l].p[qBase][tBase];
                 // this can only be true in case of a mismatch of Pur<->Pyr
-                deamPattern = (deamPattern == 0.0) ? SMOOTHING_VALUE : deamPattern;
-                deamPatternRev = (deamPatternRev == 0.0) ? SMOOTHING_VALUE : deamPatternRev;
+
+                deamPattern = std::max(deamPattern, SMOOTHING_VALUE);
+                //(deamPattern == 0.0) ? SMOOTHING_VALUE : deamPattern;
+                deamPatternRev = std::max(deamPatternRev, SMOOTHING_VALUE);
+                //(deamPatternRev == 0.0) ? SMOOTHING_VALUE : deamPatternRev;
 
                 int covDeam = deamVec[qIter].count[tBase][l];
                 int numReverse = countRevs[qIter].count[tBase][l];
-                qBaseLik += (covDeam - numReverse)*( log( baseFreqs[qBase] ) + log(deamPattern) + log(seqLik) );
-                qBaseLik += numReverse*( log( baseFreqs[qBase] ) + log(deamPatternRev) + log(seqLik) );
+                qBaseLik += (covDeam - numReverse)*( log( baseFreqs[qBase] ) + log(deamPattern) );
+                qBaseLik += numReverse*( log( baseFreqs[qBase] ) + log(deamPatternRev) );
             }
         }
         baseLikelis.push_back(qBaseLik);
@@ -51,6 +54,7 @@ int mostLikeliBaseRead(int qIter, diNucleotideProb & match, diNucleotideProb & m
 
 
 int doCorrection(LocalParameters &par) {
+
     DBReader<unsigned int> *sequenceDbr = new DBReader<unsigned int>(par.db1.c_str(), par.db1Index.c_str(), par.threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
     sequenceDbr->open(DBReader<unsigned int>::NOSORT);
 
@@ -88,6 +92,12 @@ int doCorrection(LocalParameters &par) {
     std::string filenameOne = one.str();
     std::ofstream outputFileAll;  // Declare the ofstream object globally if possible
     outputFileAll.open(filenameOne, std::ios::app);  // Open once, append mode
+
+    std::stringstream two;
+    two << "overlaps_" << time << ".tsv";
+    std::string filenameTwo = two.str();
+    std::ofstream outputFileOver;  // Declare the ofstream object globally if possible
+    outputFileOver.open(filenameTwo, std::ios::app);  // Open once, append mode
 
 #endif
 
@@ -128,15 +138,17 @@ int doCorrection(LocalParameters &par) {
         initDeamProbabilities(high5, high3, sub5p, sub3p, subDeamDiNuc, subDeamDiNucRev);
 
         diNucleotideProb seqErrMatch;
-        diNucleotideProb seqErrMis;
 
         long double seqErrCorrection= 0.01;
-        getSeqErrorProf(seqErrMatch, seqErrMis, seqErrCorrection);
+        getSeqErrorProf(seqErrMatch, seqErrCorrection);
 
         float rymerThresh = par.correctionThreshold;
+        //float rymerThresh = 0.95;
+
 
         int reverse = 0;
         int good = 0;
+
 
 #pragma omp for schedule(dynamic, 100)
         for (size_t id = 0; id < sequenceDbr->getSize(); id++) {
@@ -152,7 +164,7 @@ int doCorrection(LocalParameters &par) {
             alignments.clear();
             Matcher::readAlignmentResults(alignments, alnData);
 
-            bool qWasExtended = false;
+            bool qWasExtended = sequenceDbr->getExtData(id);
 
             for (size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
 
@@ -202,8 +214,6 @@ int doCorrection(LocalParameters &par) {
                     }
                 }
             }
-
-            qWasExtended = sequenceDbr->getExtData(id);
 
 
 // MGE marker
@@ -464,6 +474,14 @@ int doCorrection(LocalParameters &par) {
             // choose only reads
             std::vector<Matcher::result_t> reads;
 
+            //DEBUG CORRECTION
+            if ( queryKey == 4631784 ){
+                std::cerr << ">" << "QUERY_4631784" << std::endl;
+                std::cerr << querySeq << std::endl;
+            }
+            // DEBUG CORRECTION END
+
+
             for (size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
 
                 Matcher::result_t targetRead = alignments[alnIdx];     
@@ -471,11 +489,11 @@ int doCorrection(LocalParameters &par) {
                 char *tSeq = sequenceDbr->getData(tId, thread_idx);
                 bool deleteTargetSeq = false;
 
-                bool isContig = sequenceDbr->getExtData(tId);
+                // bool isContig = sequenceDbr->getExtData(tId);
 
-                if ( isContig ){
-                    continue;
-                }
+                // if ( isContig ){
+                //     continue;
+                // }
 
                 if (targetRead.isRevToAlignment){
                     tSeq = getNuclRevFragment(tSeq, targetRead.dbLen, (NucleotideMatrix *) subMat);
@@ -485,81 +503,112 @@ int doCorrection(LocalParameters &par) {
                 float insideSeqId = getSubSeqId(targetRead, querySeq, tSeq);
                 float insideSeqThr = 0.95;
 
+                float ryId = getRYSeqId(targetRead, querySeq,  tSeq, ryMap);
+                targetRead.rySeqId = ryId;
+
+                if ( targetRead.alnLength <= 100)
+                {
+                    rymerThresh = (static_cast<float>(targetRead.alnLength) - 2) / static_cast<float>(targetRead.alnLength);
+                }
+
+                if ( queryKey == 4631784 ){
+                // DEBUG CORRECTION
+                #pragma omp critical
+                {
+                        std::string targetOverlap;
+                        for ( int i = targetRead.dbStartPos; i <= targetRead.dbEndPos; i++ )
+                        {
+                            targetOverlap += tSeq[i];
+                        }
+                        std::string targetAligned(querySeqLen, '-');
+                        // Insert the overlapping region
+                        for (int i = targetRead.qStartPos, k = 0; i <= targetRead.qEndPos; i++, k++) {
+                            targetAligned[i] = targetOverlap[k];
+                        }
+                        // Print the target aligned sequence with an appropriate label
+                        //std::cerr << targetAligned << "\t" << targetRead.dbKey << std::endl;
+
+                        // if ( queryKey == 4631784 ){
+                        //     std::cerr << ">" << targetRead.dbKey << "_" << tId << std::endl;
+                        //     std::cerr << tSeq << std::endl;
+                        // }
+
+                    // Append the loop output to outputLine
+                    targetAligned += "\t";
+                    targetAligned += std::to_string(targetRead.dbKey);
+                    targetAligned += "\t";
+                    targetAligned += std::to_string(targetRead.seqId);
+                    targetAligned += "\t";
+                    targetAligned += std::to_string(insideSeqId);
+                    targetAligned += "\t";
+                    targetAligned += std::to_string(targetRead.rySeqId);
+                    targetAligned += "\t";
+                    targetAligned += std::to_string(rymerThresh);
+                    targetAligned += "\t";
+                    targetAligned += std::to_string(mgeFoundRight);
+                    targetAligned += "\t";
+                    targetAligned += std::to_string(mgeFoundLeft);
+                    targetAligned += "\t";
+                    targetAligned += std::to_string(alignments.size());
+                    targetAligned += "\n";
+
+                    if (outputFileOver.is_open()) {
+                        outputFileOver << targetAligned;
+                    }
+                }
+                // DEBUG CORRECTION END
+                }
+
                 if (deleteTargetSeq) {
                     delete[] tSeq;
                 }
 
-                float ryId = getRYSeqId(targetRead, querySeq,  tSeq, ryMap);
-                targetRead.rySeqId = ryId;
-
-                //if ( targetRead.seqId >= rymerThresh && insideSeqId >= insideSeqThr && !mgeFoundRight && targetRead.dbStartPos == 0 && static_cast<unsigned int>(targetRead.qEndPos) == (querySeqLen - 1)) {
                 if ( targetRead.rySeqId >= rymerThresh && insideSeqId >= insideSeqThr && !mgeFoundRight && targetRead.dbStartPos == 0 && static_cast<unsigned int>(targetRead.qEndPos) == (querySeqLen - 1)) {
                     // right extension
-                    //here we decide if correction should be done
-                    Matcher::result_t targetRead = alignments[alnIdx];
+                    // here we decide which candidates to include in the correction process
+                    // Matcher::result_t targetRead = alignments[alnIdx];
 
-                    const bool notRightStartAndLeftStart = !(targetRead.dbStartPos == 0 && targetRead.qStartPos == 0 );
-                    const bool rightStart = targetRead.dbStartPos == 0 && (targetRead.dbEndPos != static_cast<int>(targetRead.dbLen)-1);
-                    const bool leftStart = targetRead.qStartPos == 0   && (targetRead.qEndPos != static_cast<int>(targetRead.qLen)-1);
-                    const bool isNotIdentity = (targetRead.dbKey != queryKey);
+                    // unsigned int tId = sequenceDbr->getId(targetRead.dbKey);
+                    // char *tSeq = sequenceDbr->getData(tId, thread_idx);
+                    // bool deleteTargetSeq = false;
 
-                    if(notRightStartAndLeftStart && (rightStart || leftStart) && isNotIdentity){
-                        unsigned int tId = sequenceDbr->getId(targetRead.dbKey);
-                        char *tSeq = sequenceDbr->getData(tId, thread_idx);
-                        bool deleteTargetSeq = false;
+                    // if (targetRead.isRevToAlignment){
+                    //     tSeq = getNuclRevFragment(tSeq, targetRead.dbLen, (NucleotideMatrix *) subMat);
+                    //     deleteTargetSeq = true;
+                    // }
 
-                        if (targetRead.isRevToAlignment){
-                            tSeq = getNuclRevFragment(tSeq, targetRead.dbLen, (NucleotideMatrix *) subMat);
-                            deleteTargetSeq = true;
-                        }
-
-                        bool isRightOverlap = true;
-                        if (unsigned(targetRead.qStartPos) == 0 && unsigned(targetRead.dbEndPos) == (targetRead.dbLen - 1)) {
-                            isRightOverlap = false;
-                        }
-
-                        std::vector<diNucleotideProb> subDeamDiNucRef = targetRead.isRevToAlignment ? subDeamDiNucRev : subDeamDiNuc;
-                        calc_likelihood_correction(targetRead, querySeq, tSeq, subDeamDiNucRef, isRightOverlap, seqErrMatch, seqErrMis, queryKey);
-                        if (deleteTargetSeq) {
-                            delete[] tSeq;
-                        }
-                    }
+                    // std::vector<diNucleotideProb> subDeamDiNucRef = targetRead.isRevToAlignment ? subDeamDiNucRev : subDeamDiNuc;
+                    // calc_likelihood_correction(targetRead, querySeq, tSeq, subDeamDiNucRef, seqErrMatch, queryKey);
+                    // if (deleteTargetSeq) {
+                    //     delete[] tSeq;
+                    // }
                     reads.push_back(alignments[alnIdx]);
                 }
-                //else if ( targetRead.seqId >= rymerThresh && insideSeqId >= insideSeqThr && !mgeFoundLeft &&  alignments[alnIdx].qStartPos == 0 && static_cast<unsigned int>(alignments[alnIdx].dbEndPos) == (alignments[alnIdx].dbLen - 1)) {
-                else if ( targetRead.rySeqId >= rymerThresh && insideSeqId >= insideSeqThr && !mgeFoundLeft &&  alignments[alnIdx].qStartPos == 0 && static_cast<unsigned int>(alignments[alnIdx].dbEndPos) == (alignments[alnIdx].dbLen - 1)) {
-                    // // left extension
-                    // // here we decide if correction should be done
-                    Matcher::result_t targetRead = alignments[alnIdx];
+                else if ( targetRead.rySeqId >= rymerThresh && insideSeqId >= insideSeqThr && !mgeFoundLeft && alignments[alnIdx].qStartPos == 0 && static_cast<unsigned int>(alignments[alnIdx].dbEndPos) == (alignments[alnIdx].dbLen - 1)) {
+                    // left extension
+                    // here we decide which candidates to include in the correction process
+                    // Matcher::result_t targetRead = alignments[alnIdx];
 
-                    const bool notRightStartAndLeftStart = !(targetRead.dbStartPos == 0 && targetRead.qStartPos == 0 );
-                    const bool rightStart = targetRead.dbStartPos == 0 && (targetRead.dbEndPos != static_cast<int>(targetRead.dbLen)-1);
-                    const bool leftStart = targetRead.qStartPos == 0   && (targetRead.qEndPos != static_cast<int>(targetRead.qLen)-1);
-                    const bool isNotIdentity = (targetRead.dbKey != queryKey);
+                    // unsigned int tId = sequenceDbr->getId(targetRead.dbKey);
+                    // char *tSeq = sequenceDbr->getData(tId, thread_idx);
+                    // bool deleteTargetSeq = false;
 
-                    if(notRightStartAndLeftStart && (rightStart || leftStart) && isNotIdentity){
-                        unsigned int tId = sequenceDbr->getId(targetRead.dbKey);
-                        char *tSeq = sequenceDbr->getData(tId, thread_idx);
-                        bool deleteTargetSeq = false;
+                    // if (targetRead.isRevToAlignment){
+                    //     tSeq = getNuclRevFragment(tSeq, targetRead.dbLen, (NucleotideMatrix *) subMat);
+                    //     deleteTargetSeq = true;
+                    // }
 
-                        if (targetRead.isRevToAlignment){
-                            tSeq = getNuclRevFragment(tSeq, targetRead.dbLen, (NucleotideMatrix *) subMat);
-                            deleteTargetSeq = true;
-                        }
-
-                        bool isRightOverlap = true;
-                        if (unsigned(targetRead.qStartPos) == 0 && unsigned(targetRead.dbEndPos) == (targetRead.dbLen - 1)) {
-                            isRightOverlap = false;
-                        }
-
-                        std::vector<diNucleotideProb> subDeamDiNucRef = targetRead.isRevToAlignment ? subDeamDiNucRev : subDeamDiNuc;
-                        calc_likelihood_correction(targetRead, querySeq, tSeq, subDeamDiNucRef, isRightOverlap, seqErrMatch, seqErrMis, queryKey);
-                        if (deleteTargetSeq) {
-                            delete[] tSeq;
-                        }
-                    }
+                    // std::vector<diNucleotideProb> subDeamDiNucRef = targetRead.isRevToAlignment ? subDeamDiNucRev : subDeamDiNuc;
+                    // calc_likelihood_correction(targetRead, querySeq, tSeq, subDeamDiNucRef, seqErrMatch, queryKey);
+                    // if (deleteTargetSeq) {
+                    //     delete[] tSeq;
+                    // }
                     reads.push_back(alignments[alnIdx]);
                 }
+                else if (targetRead.rySeqId >= rymerThresh && insideSeqId >= insideSeqThr ){
+                    // this is for the targets that align within the query and do not potentially extend anything, therefore the MGE finder does not make sense here
+                    reads.push_back(alignments[alnIdx]);
+                } 
             }
             alignments.clear();
 
@@ -573,23 +622,12 @@ int doCorrection(LocalParameters &par) {
                 char *tarSeq = sequenceDbr->getData(targetId, thread_idx);
                 char *tSeq;
 
-                // new in CarpeDeam12: only correct with sequences that are potentially also extensions
-                const bool notRightStartAndLeftStart = !(target.dbStartPos == 0 && target.qStartPos == 0 );
-                const bool rightStart = target.dbStartPos == 0 && (target.dbEndPos != static_cast<int>(target.dbLen)-1);
-                const bool leftStart = target.qStartPos == 0   && (target.qEndPos != static_cast<int>(target.qLen)-1);
-                const bool isNotIdentity = (target.dbKey != queryKey);
-                // const bool notRightStartAndLeftStart = 1;
-                // const bool rightStart = 1;
-                // const bool leftStart = 1;
-                // const bool isNotIdentity = 1;
-
                 const bool targetWasExt = sequenceDbr->getExtData(targetId);
 
                 // Get target sequence here to avoid passing the sequenceDbr
                 unsigned int targetSeqLen = sequenceDbr->getSeqLen(targetId);
                 bool deleteTargetSeq = false;
 
-            
                 if (useReverse[targetId]) {
                     tSeq = getNuclRevFragment(tarSeq, targetSeqLen, (NucleotideMatrix *) subMat);
                     deleteTargetSeq = true;
@@ -602,35 +640,33 @@ int doCorrection(LocalParameters &par) {
                 target.rySeqId = ryId;
 
                 //if ( targetWasExt == false && isNotIdentity && target.rySeqId >= rymerThresh && target.seqId >= par.seqIdThr && target.alnLength >= 30 && ){
-                if ( targetWasExt == false && isNotIdentity && target.rySeqId >= rymerThresh && target.seqId >= par.seqIdThr && target.alnLength >= 30 && (rightStart || leftStart) && notRightStartAndLeftStart && isNotIdentity ) {
+                //if ( targetWasExt == false && target.rySeqId >= rymerThresh && target.seqId >= par.seqIdThr && target.alnLength >= 30 ) {
+                if ( target.rySeqId >= rymerThresh && target.seqId >= par.seqIdThr && target.alnLength >= 30 ) {
 
-                    //std::cerr << ">" << target.dbKey << std::endl;
-                    //std::cerr << tSeq; 
+                    std::vector<int> subdeam_index(target.dbLen);
+                    // Create lookup vector
+                    for (size_t i = 0; i < 5; ++i) {
+                        subdeam_index[i] = i;
+                    }
+                    for (size_t i = 5; i < target.dbLen - 5; ++i) {
+                        subdeam_index[i] = 5;
+                    }
+                    for (size_t i = 0; i < 5; ++i) {
+                        subdeam_index[target.dbLen - 5 + i] = 6 + i;
+                    }
 
-                    for ( int pos = target.qStartPos; pos <= target.qEndPos; pos++ ){
+                    for ( unsigned int pos = 0; pos < target.alnLength; pos++ ){
 
-                        int queryIter = pos - target.qStartPos;
-                        int targetBase = nucleotideMap[tSeq[target.dbStartPos + queryIter]];
-                        // Getting coverage of each base A,C,G,T at position "pos" in alignment (=overlap)
-                        queryCov[pos][targetBase] += 1;
-                        totalCov[pos] += 1;
+                        int posInQuery = target.qStartPos + pos;
 
-                        int relativePos = target.dbStartPos + queryIter;
-                        if ( relativePos < 5 ){
-                            deamVec[pos].count[targetBase][relativePos] += 1;
-                            revCount[pos].count[targetBase][relativePos] += target.isRevToAlignment;
-                            //tProbs = subDeamDiNuc[relativePos];
-                        }
-                        else if ( relativePos > target.dbEndPos - 5 ){
-                            deamVec[pos].count[targetBase][ 10 - ( target.dbEndPos - relativePos )] += 1;
-                            revCount[pos].count[targetBase][ 10 - ( target.dbEndPos - relativePos )] += target.isRevToAlignment;
-                            //tProbs = subDeamDiNuc[ 10 - (target.dbEndPos - relativePos) ];
-                        }
-                        else{
-                            deamVec[pos].count[targetBase][5] += 1;
-                            revCount[pos].count[targetBase][5] += target.isRevToAlignment;
-                            //tProbs = subDeamDiNuc[5];
-                        }
+                        int targetBase = nucleotideMap[tSeq[target.dbStartPos + pos]];
+
+                        queryCov[posInQuery][targetBase] += 1;
+
+                        totalCov[posInQuery] += 1;
+                        int deamT = subdeam_index[target.dbStartPos + pos];
+                        deamVec[posInQuery].count[targetBase][deamT] += 1;
+                        revCount[posInQuery].count[targetBase][deamT] += target.isRevToAlignment;
                     }
                 }
 
@@ -646,30 +682,66 @@ int doCorrection(LocalParameters &par) {
             for ( unsigned int qPos = 0; qPos < querySeqLen; qPos++ )
             {
                 int qBase = nucleotideMap[querySeq[qPos]];
-                // If query is a read, add it to the coverage as it should be included in the voting
-                if ( totalCov[qPos] > 0 && qWasExtended == false )
-                {
-                    // Getting coverage of each base A,C,G,T at position "pos" in alignment (=overlap)
-                    queryCov[qPos][qBase] += 1;
-                    totalCov[qPos] += 1;
+                // // If query is a read, add it to the coverage as it should be included in the voting
+                // if ( totalCov[qPos] > 0 && qWasExtended == false )
+                // {
+                // Getting coverage of each base A,C,G,T at position "pos" in alignment (=overlap)
+                queryCov[qPos][qBase] += 1;
+                totalCov[qPos] += 1;
 
-                    if ( qPos < 5 ){
-                        deamVec[qPos].count[qBase][qPos] += 1;
-                    }
-                    else if ( qPos >= querySeqLen - 5 ){
-                        deamVec[qPos].count[qBase][ 10 - ( (querySeqLen-1) - qPos )] += 1;
-                    }
-                    else{
-                        deamVec[qPos].count[qBase][5] += 1;
-                    }
+                if ( qPos < 5 ){
+                    deamVec[qPos].count[qBase][qPos] += 1;
                 }
+                else if ( qPos >= querySeqLen - 5 ){
+                    int queryIdx = querySeqLen - 1 - qPos;
+                    deamVec[qPos].count[qBase][ 10 - queryIdx] += 1;
+                }
+                else{
+                    deamVec[qPos].count[qBase][5] += 1;
+                }
+                // }
 
+               
                 if ( totalCov[qPos] <= 1){
                     corrQuery[qPos] = querySeq[qPos];
                 }
+                // if the sequence is a contig and has not been extended or corrected then just go by coverage:
+                else if ( qWasExtended == false ){
+                    unsigned int maxVal = 0;
+                    bool flags[4] = {false, false, false, false};
+                    size_t maxCount = 0;
+                    size_t maxIdx = qBase;
+
+                    // Find the max value in the current row
+                    for (size_t j = 0; j < queryCov[qPos].size(); ++j) {
+                        if (queryCov[qPos][j] > maxVal) {
+                            maxVal = queryCov[qPos][j];
+                        }
+                    }
+
+                    // Set flags for indices where the max value occurs
+                    for (size_t j = 0; j < queryCov[qPos].size(); ++j) {
+                        if (queryCov[qPos][j] == maxVal) {
+                            flags[j] = true;
+                            maxCount++;
+                        }
+                    }
+                    if ( (flags[qBase] && maxCount > 1) || (!flags[qBase] && maxCount > 1) ){
+                        corrQuery[qPos] = querySeq[qPos];
+                    }
+                    else{
+                        for (size_t j = 0; j < queryCov[qPos].size(); ++j) {
+                            if (queryCov[qPos][j] == maxVal) {
+                                maxIdx = j;
+                                break;
+                            }
+                        }
+                        corrQuery[qPos] = "ACGT"[maxIdx];
+                    }
+                }
                 else {
                     int newBase = qBase;
-                    int newBaseCandidate = mostLikeliBaseRead(qPos, seqErrMatch, seqErrMis, deamVec, revCount, subDeamDiNuc, subDeamDiNucRev);
+                    int newBaseCandidate = mostLikeliBaseRead(qPos, deamVec, revCount, subDeamDiNuc, subDeamDiNucRev);
                     if ((qBase == 3 && (newBaseCandidate == 1 || newBaseCandidate == 3)) ||
                         (qBase == 0 && (newBaseCandidate == 0 || newBaseCandidate == 2))) {
                         newBase = newBaseCandidate;
@@ -715,8 +787,10 @@ int doCorrection(LocalParameters &par) {
 #endif
 
             //if ( queryKey == 1250638 ){
-            //if ( queryKey == 4631784 ){
-            if ( false ){
+            if ( queryKey == 4631784 ){
+            //unsigned int max_cov = *std::max_element(totalCov.begin(), totalCov.end());
+            //if ( max_cov >= 4 ){
+            //if ( queryKey == 598571 ){
                 std::cerr << ">Original\n" << querySeq;
                 std::cerr << ">Corrected\n" << corrStr;
                 std::cerr << "TotalCov:\n";
@@ -779,13 +853,6 @@ int doCorrection(LocalParameters &par) {
     std::cout << "Correction end" << std::endl;
     return EXIT_SUCCESS;
 }
-
-/* int helloworld()
-{
-    std::cout << "hello world" << std::endl;
-    exit(1);
-    return 0;
-} */
 
 int correction(int argc, const char **argv, const Command& command) {
     LocalParameters& par = LocalParameters::getLocalInstance();

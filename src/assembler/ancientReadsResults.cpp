@@ -46,7 +46,7 @@ std::vector<unsigned int> getMaxAlnLen(std::vector<Matcher::result_t> &alignment
 }
 
 
-scorePerRes r_s_pair(Matcher::result_t res, char* querySeq, char* targetSeq, std::vector<diNucleotideProb> &subDeamDiNuc, std::vector<diNucleotideProb> &subDeamDiNucRev, unsigned int maxLeft, unsigned int maxRight, float randAlnPenal, diNucleotideProb & seqErrMatch, diNucleotideProb & seqErrMis, float excessPenal)
+scorePerRes r_s_pair(Matcher::result_t res, char* querySeq, char* targetSeq, std::vector<diNucleotideProb> &subDeamDiNuc, std::vector<diNucleotideProb> &subDeamDiNucRev, unsigned int maxLeft, unsigned int maxRight, float randAlnPenal, diNucleotideProb & seqErrMatch, float excessPenal)
 {
     scorePerRes fiveToThree;
     //scorePerRes threeToFive;
@@ -54,17 +54,15 @@ scorePerRes r_s_pair(Matcher::result_t res, char* querySeq, char* targetSeq, std
     fiveToThree.r = res;
     //threeToFive.r = res;
 
-    bool isRightOverlap = true;
     unsigned int maxOverlap = maxRight;
 
     if (unsigned(res.qStartPos) == 0 && unsigned(res.dbEndPos) == (res.dbLen - 1)) {
-        isRightOverlap = false;
         maxOverlap = maxLeft;
     }
 
     std::vector<diNucleotideProb> subDeamDiNucRef = res.isRevToAlignment ? subDeamDiNucRev : subDeamDiNuc;
 
-    calc_likelihood(fiveToThree, querySeq, targetSeq, subDeamDiNucRef, maxOverlap, isRightOverlap, randAlnPenal, seqErrMatch, seqErrMis, excessPenal);
+    calc_likelihood(fiveToThree, querySeq, targetSeq, subDeamDiNucRef, maxOverlap, randAlnPenal, seqErrMatch, excessPenal);
     // Modifying ThreeToFive
     //std::cerr << " REV " << std::endl;
     //calc_likelihood(threeToFive, querySeq, targetSeq, subDeamDiNucRev, maxOverlap, isRightOverlap, randAlnPenal, seqErrMatch, seqErrMis);
@@ -189,10 +187,9 @@ int doNuclAssembly1(LocalParameters &par) {
         initDeamProbabilities(high5, high3, sub5p, sub3p, subDeamDiNuc, subDeamDiNucRev);
 
         diNucleotideProb seqErrMatch;
-        diNucleotideProb seqErrMis;
 
         long double seqErrCorrection= 0.001;
-        getSeqErrorProf(seqErrMatch, seqErrMis, seqErrCorrection);
+        getSeqErrorProf(seqErrMatch, seqErrCorrection);
 
         float randAlnPenal = par.randomAlignPenal;
 
@@ -369,7 +366,7 @@ int doNuclAssembly1(LocalParameters &par) {
 
                 if ( (rightStart || leftStart) && notInside && isNotIdentity && notContig[alnIdx].rySeqId >= par.rySeqIdThr && notContig[alnIdx].seqId >= par.seqIdThr)
                 {
-                    scorePerRes toAdd = r_s_pair(notContig[alnIdx], querySeq, targetSeq, subDeamDiNuc, subDeamDiNucRev, maxAlnLeft, maxAlnRight, randAlnPenal, seqErrMatch, seqErrMis, par.excessPenal);
+                    scorePerRes toAdd = r_s_pair(notContig[alnIdx], querySeq, targetSeq, subDeamDiNuc, subDeamDiNucRev, maxAlnLeft, maxAlnRight, randAlnPenal, seqErrMatch, par.excessPenal);
 
 #ifdef DEBUGEXT
                     std::string outputLine = std::to_string(toAdd.sRatio) + "\t" +
@@ -616,7 +613,7 @@ int doNuclAssembly1(LocalParameters &par) {
                                 deleteTargetSeq = true;
                             }
 
-                            scorePerRes toAdd = r_s_pair(tmpAlignmentsReads[alnIdx], querySeq, tSeq, subDeamDiNuc, subDeamDiNucRev, maxAlnLeft, maxAlnRight, randAlnPenal, seqErrMatch, seqErrMis, par.excessPenal);
+                            scorePerRes toAdd = r_s_pair(tmpAlignmentsReads[alnIdx], querySeq, tSeq, subDeamDiNuc, subDeamDiNucRev, maxAlnLeft, maxAlnRight, randAlnPenal, seqErrMatch, par.excessPenal);
                             if ( toAdd.sRatio > par.likelihoodThreshold ) {
                                 alnQueueReads.push( toAdd );
                             }

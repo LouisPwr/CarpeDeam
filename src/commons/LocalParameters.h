@@ -210,6 +210,9 @@ class LocalParameters : public Parameters {
         reduceredundancy.push_back(&PARAM_THREADS);
         reduceredundancy.push_back(&PARAM_REMOVE_TMP_FILES);
 
+        // // kmermatcher (need to set different defaults)
+        // kmermatcher.push_back(&PARAM_INCLUDE_ONLY_EXTENDABLE);
+
         // assembler workflow
         assembleworkflow = combineList(createdb, kmermatcher);
         assembleworkflow = combineList(assembleworkflow, rescorediagonal);
@@ -229,6 +232,7 @@ class LocalParameters : public Parameters {
         nuclassembleworkflow = combineList(nuclassembleworkflow, rescorediagonal);
         nuclassembleworkflow = combineList(nuclassembleworkflow, assembleresults);
         nuclassembleworkflow = combineList(nuclassembleworkflow, cyclecheck);
+        //nuclassembleworkflow = combineList(nuclassembleworkflow, kmermatcher);
 
         nuclassembleworkflow.push_back(&PARAM_CYCLE_CHECK);
         nuclassembleworkflow.push_back(&PARAM_MIN_CONTIG_LEN);

@@ -201,10 +201,9 @@ int doNuclAssembly2(LocalParameters &par) {
         initDeamProbabilities(high5, high3, sub5p, sub3p, subDeamDiNuc, subDeamDiNucRev);
 
         diNucleotideProb seqErrMatch;
-        diNucleotideProb seqErrMis;
 
         long double seqErrCorrection= 0.01;
-        getSeqErrorProf(seqErrMatch, seqErrMis, seqErrCorrection);
+        getSeqErrorProf(seqErrMatch, seqErrCorrection);
 
         // USING COVERAGE: We want the coverage per center sequence
 

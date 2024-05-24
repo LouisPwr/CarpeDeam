@@ -24,7 +24,7 @@ void setNuclAssemblerWorkflowDefaults(LocalParameters *p) {
     p->kmersPerSequenceScale = 0.1;
     p->spacedKmer = false;
     p->ignoreMultiKmer = true;
-    p->includeOnlyExtendable = true;
+    p->includeOnlyExtendable = false;
     p->addBacktrace = false;
     p->rescoreMode = Parameters::RESCORE_MODE_END_TO_END_ALIGNMENT;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
@@ -98,6 +98,8 @@ int nuclassemble(int argc, const char **argv, const Command &command) {
     cmd.addVariable("RUNNER", par.runner.c_str());
     cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
     cmd.addVariable("NUM_IT_READS", SSTR(par.numIterationsReads).c_str());
+
+    par.includeOnlyExtendable = false;
     // # 1. Finding exact $k$-mer matches.
     cmd.addVariable("KMERMATCHER_PAR", par.createParameterString(par.kmermatcher).c_str());
 
