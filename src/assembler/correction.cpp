@@ -1,23 +1,24 @@
 #include "nuclassembleUtil.h"
-const double SMOOTHING_VALUE = 0.0000001;
+const double SMOOTHING_VALUE = 0.0001;
 
 #define DEBUG_CORR
 
-int mostLikeliBaseRead(int qIter, std::vector<countDeamCov> & deamVec, std::vector<countDeamCov> & countRevs, std::vector<diNucleotideProb> & subDeamDiNuc, std::vector<diNucleotideProb> & subDeamDiNucRev)
+int mostLikeliBaseRead(const int baseInQuery, int qIter, std::vector<countDeamCov> & deamVec, std::vector<countDeamCov> & countRevs, std::vector<diNucleotideProb> & subDeamDiNuc, std::vector<diNucleotideProb> & subDeamDiNucRev, diNucleotideProb & seqErrMatch)
 {
     std::vector<double> baseLikelis; 
 
     // Initial likelihod of qBase (either A,C,G or T)
-    std::vector<float> baseFreqs = { 0.23554, 0.26446, 0.26446, 0.23554 };
+    //std::vector<float> baseFreqs = { 0.23554, 0.26446, 0.26446, 0.23554 };
+    std::vector<float> baseFreqs = { 0.25, 0.25, 0.25, 0.25 };
 
     for ( int qBase=0; qBase<4; qBase++ )
     {
         double qBaseLik = 0;
+        long double qBaseErr = 0;
+        qBaseErr = seqErrMatch.p[qBase][baseInQuery];
         //double qBaseLogLik = 0;
         for (int tBase=0; tBase < 4; tBase++)
         {
-            //double seqLik = (qBase == tBase) ? match.p[qBase][tBase] : mismatch.p[qBase][tBase];
-
             // The vector deamVec contains the counts of deaminations per position;
             // Iterating through it to make the amount of multiplications we need to do. 
             for ( unsigned int l = 0; l < subDeamDiNuc.size(); l++)
@@ -25,7 +26,6 @@ int mostLikeliBaseRead(int qIter, std::vector<countDeamCov> & deamVec, std::vect
                 double deamPattern = subDeamDiNuc[l].p[qBase][tBase];
                 double deamPatternRev = subDeamDiNucRev[l].p[qBase][tBase];
                 // this can only be true in case of a mismatch of Pur<->Pyr
-
                 deamPattern = std::max(deamPattern, SMOOTHING_VALUE);
                 //(deamPattern == 0.0) ? SMOOTHING_VALUE : deamPattern;
                 deamPatternRev = std::max(deamPatternRev, SMOOTHING_VALUE);
@@ -33,8 +33,8 @@ int mostLikeliBaseRead(int qIter, std::vector<countDeamCov> & deamVec, std::vect
 
                 int covDeam = deamVec[qIter].count[tBase][l];
                 int numReverse = countRevs[qIter].count[tBase][l];
-                qBaseLik += (covDeam - numReverse)*( log( baseFreqs[qBase] ) + log(deamPattern) );
-                qBaseLik += numReverse*( log( baseFreqs[qBase] ) + log(deamPatternRev) );
+                qBaseLik += (covDeam - numReverse)*( log( baseFreqs[qBase] ) + log(qBaseErr) + log(deamPattern) );
+                qBaseLik += numReverse*( log( baseFreqs[qBase] ) + log(qBaseErr) + log(deamPatternRev) );
             }
         }
         baseLikelis.push_back(qBaseLik);
@@ -706,46 +706,46 @@ int doCorrection(LocalParameters &par) {
                     corrQuery[qPos] = querySeq[qPos];
                 }
                 // if the sequence is a contig and has not been extended or corrected then just go by coverage:
-                else if ( qWasExtended == false ){
-                    unsigned int maxVal = 0;
-                    bool flags[4] = {false, false, false, false};
-                    size_t maxCount = 0;
-                    size_t maxIdx = qBase;
+                // else if ( qWasExtended == false ){
+                //     unsigned int maxVal = 0;
+                //     bool flags[4] = {false, false, false, false};
+                //     size_t maxCount = 0;
+                //     size_t maxIdx = qBase;
 
-                    // Find the max value in the current row
-                    for (size_t j = 0; j < queryCov[qPos].size(); ++j) {
-                        if (queryCov[qPos][j] > maxVal) {
-                            maxVal = queryCov[qPos][j];
-                        }
-                    }
+                //     // Find the max value in the current row
+                //     for (size_t j = 0; j < queryCov[qPos].size(); ++j) {
+                //         if (queryCov[qPos][j] > maxVal) {
+                //             maxVal = queryCov[qPos][j];
+                //         }
+                //     }
 
-                    // Set flags for indices where the max value occurs
-                    for (size_t j = 0; j < queryCov[qPos].size(); ++j) {
-                        if (queryCov[qPos][j] == maxVal) {
-                            flags[j] = true;
-                            maxCount++;
-                        }
-                    }
-                    if ( (flags[qBase] && maxCount > 1) || (!flags[qBase] && maxCount > 1) ){
-                        corrQuery[qPos] = querySeq[qPos];
-                    }
-                    else{
-                        for (size_t j = 0; j < queryCov[qPos].size(); ++j) {
-                            if (queryCov[qPos][j] == maxVal) {
-                                maxIdx = j;
-                                break;
-                            }
-                        }
-                        corrQuery[qPos] = "ACGT"[maxIdx];
-                    }
-                }
+                //     // Set flags for indices where the max value occurs
+                //     for (size_t j = 0; j < queryCov[qPos].size(); ++j) {
+                //         if (queryCov[qPos][j] == maxVal) {
+                //             flags[j] = true;
+                //             maxCount++;
+                //         }
+                //     }
+                //     if ( (flags[qBase] && maxCount > 1) || (!flags[qBase] && maxCount > 1) ){
+                //         corrQuery[qPos] = querySeq[qPos];
+                //     }
+                //     else{
+                //         for (size_t j = 0; j < queryCov[qPos].size(); ++j) {
+                //             if (queryCov[qPos][j] == maxVal) {
+                //                 maxIdx = j;
+                //                 break;
+                //             }
+                //         }
+                //         corrQuery[qPos] = "ACGT"[maxIdx];
+                //     }
+                // }
                 else {
                     int newBase = qBase;
-                    int newBaseCandidate = mostLikeliBaseRead(qPos, deamVec, revCount, subDeamDiNuc, subDeamDiNucRev);
-                    if ((qBase == 3 && (newBaseCandidate == 1 || newBaseCandidate == 3)) ||
-                        (qBase == 0 && (newBaseCandidate == 0 || newBaseCandidate == 2))) {
+                    int newBaseCandidate = mostLikeliBaseRead(qBase, qPos, deamVec, revCount, subDeamDiNuc, subDeamDiNucRev, seqErrMatch);
+                    // if ((qBase == 3 && (newBaseCandidate == 1 || newBaseCandidate == 3)) ||
+                    //     (qBase == 0 && (newBaseCandidate == 0 || newBaseCandidate == 2))) {
                         newBase = newBaseCandidate;
-                    }
+                    //}
 
                     corrQuery[qPos] = "ACGT"[newBase];
                     // if ( newBase != qBase )
