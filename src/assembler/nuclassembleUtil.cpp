@@ -1,5 +1,5 @@
 #include "nuclassembleUtil.h"
-const double SMOOTHING_VALUE = 0.0000001;
+const double SMOOTHING_VALUE = 0.001;
 
 #ifdef OPENMP
 #include <omp.h>
@@ -393,25 +393,34 @@ void compareAndPrintIfDifferent(const diNucleotideProb& vec1, const diNucleotide
         }
 }
 
-void calc_likelihood_correction(Matcher::result_t candidate, char* querySeq, const char* targetSeq, std::vector<diNucleotideProb> & subDeamDiNuc, diNucleotideProb & seqErrMatch, unsigned int qKey)
+void calc_likelihood_correction(Matcher::result_t rightLongestCandi, Matcher::result_t candidate, std::string querySeq, std::string targetSeq, std::vector<diNucleotideProb> & subDeamDiNuc, diNucleotideProb & seqErrMatch)
 {
     //std::vector<float> baseFreqs = { 0.23554, 0.26446, 0.26446, 0.23554 };
+
+    std::unordered_map<char, int> ryMap = {
+    {'A', 0},
+    {'C', 1},
+    {'G', 0},
+    {'T', 1}};
 
     unsigned int countMatch = 0;
     unsigned int countMismatch = 0;
 
-    // Extract the query and target sequences
-    std::string queryOverlap;
-    for ( int i = candidate.qStartPos; i <= candidate.qEndPos; i++ )
-    {
-        queryOverlap += querySeq[i];
-    }
+    unsigned int countRyMatch = 0;
+    unsigned int countRyMismatch = 0;
 
-    std::string targetOverlap;
-    for ( int i = candidate.dbStartPos; i <= candidate.dbEndPos; i++ )
-    {
-        targetOverlap += targetSeq[i];
-    }
+    // // Extract the query and target sequences
+    // std::string queryOverlap;
+    // for ( int i = candidate.qStartPos; i <= candidate.qEndPos; i++ )
+    // {
+    //     queryOverlap += querySeq[i];
+    // }
+
+    // std::string targetOverlap;
+    // for ( int i = candidate.dbStartPos; i <= candidate.dbEndPos; i++ )
+    // {
+    //     targetOverlap += targetSeq[i];
+    // }
 
     // Compare the sequences and print them if they're not identical
     /* if (queryOverlap != targetOverlap)
@@ -446,15 +455,17 @@ void calc_likelihood_correction(Matcher::result_t candidate, char* querySeq, con
         subdeam_lookup[candidate.dbLen - 5 + i] = subDeamDiNuc[ 6 + i];
     }
 
+    // longest extension is
+    unsigned int minExt = candidate.dbLen - candidate.alnLength;
 
-    //You either have a match or a mismatch
-    for ( unsigned int t = 0; t < candidate.alnLength; t++ )
+    // We want to iterate over the extension paths only
+    for ( unsigned int t = 0; t <= minExt; t++ )
     {   
         double lik_one = 0;
         double lik_two = 0;
 
         diNucleotideProb tProbs;
-        tProbs = subdeam_lookup[candidate.dbStartPos + t];
+        tProbs = subdeam_lookup[candidate.dbEndPos + t];
 
         // DEBUGGING
         // std::cerr << "t:\t" << t << "\tcandidate.dbStartPos\t" << candidate.dbStartPos << std::endl;
@@ -465,8 +476,8 @@ void calc_likelihood_correction(Matcher::result_t candidate, char* querySeq, con
 
         // first sequence is reference
 
-        int qBase = nucleotideMap[queryOverlap[t]];
-        int tBase = nucleotideMap[targetOverlap[t]];
+        int qBase = nucleotideMap[querySeq[rightLongestCandi.dbEndPos + t]];
+        int tBase = nucleotideMap[targetSeq[candidate.dbEndPos + t]];
 
         // if ( qKey == 4631784 ){
         //     std::cerr << "lik 1" << std::endl;
@@ -503,7 +514,7 @@ void calc_likelihood_correction(Matcher::result_t candidate, char* querySeq, con
         }
         else{
             //lik_one += 1;
-            lik_one += (0.99);
+            lik_one += (0.999);
         }
 
         if (tBase == qBase){
@@ -513,9 +524,16 @@ void calc_likelihood_correction(Matcher::result_t candidate, char* querySeq, con
             countMismatch++;
         }
 
+        if (ryMap[targetSeq[candidate.dbEndPos + t]] == ryMap[querySeq[rightLongestCandi.dbEndPos + t]]){
+            countRyMatch++;
+        }
+        else{
+            countRyMismatch++;
+        }
+
         // second sequence is reference
-        int tBase2 = nucleotideMap[queryOverlap[t]];
-        int qBase2 = nucleotideMap[targetOverlap[t]];
+        int qBase2 = nucleotideMap[targetSeq[candidate.dbEndPos + t]];
+        int tBase2 = nucleotideMap[querySeq[rightLongestCandi.dbEndPos + t]];
 
         // if ( qKey == 4631784 ){
         //     std::cerr << "lik 2" << std::endl;
@@ -523,30 +541,28 @@ void calc_likelihood_correction(Matcher::result_t candidate, char* querySeq, con
         //     std::cerr << "t_overlap\t" << targetOverlap << std::endl;
         // }
 
-        if ( tBase2 != qBase2){
+        if ( tBase2 != qBase2 ){
             for (int query = 0; query<4; query++){
-                // seq error in obs. qBase2:
+                // seq error in obs. qBase:
                 long double qBaseErr = 0;
                 qBaseErr = seqErrMatch.p[query][qBase2];
 
                 for (int target = 0; target<4; target++){
-
                     double match_lik = std::max(static_cast<long double>(SMOOTHING_VALUE), tProbs.p[query][target]);
 
                     // seq error in obs. tBase:
                     long double tBaseErr = 0;
                     tBaseErr = seqErrMatch.p[target][tBase2];
 
-                    // Print variable names and values before updating likMod
+                    // // Print variable names and values before updating likMod
                     // if ( qKey == 4631784 ){
-                    //     std::cerr << "qBase2\ttBase2\tquery\ttarget\tqBaseErr\ttBaseErr\tmatch_lik\n";
-                    //     std::cerr << qBase2 << "\t" << tBase2 << "\t" << query << "\t" << target << "\t" 
-                    //     << std::fixed << std::setprecision(10) << qBaseErr << "\t" 
-                    //     << tBaseErr << "\t" << match_lik << "\n";
+                    // std::cerr << "qBase\ttBase\tquery\ttarget\tqBaseErr\ttBaseErr\tmatch_lik\n";
+                    // std::cerr << qBase << "\t" << tBase << "\t" << query << "\t" << target << "\t" 
+                    //         << std::fixed << std::setprecision(10) << qBaseErr << "\t" 
+                    //         << tBaseErr << "\t" << match_lik << "\n";
                     // }
+
                     //lik_one += std::exp(std::log(baseFreqs[query])+std::log(qBaseErr)+std::log(tBaseErr)+std::log(match_lik));
-                    //lik_two += std::exp(std::log(baseFreqs[query])+std::log(qBaseErr)+std::log(tBaseErr)+std::log(match_lik));
-                    //lik_two += std::exp(std::log(0.25)+std::log(qBaseErr)+std::log(tBaseErr)+std::log(match_lik));
                     lik_two += std::exp(std::log(qBaseErr)+std::log(tBaseErr)+std::log(match_lik));
 
                 }
@@ -554,7 +570,7 @@ void calc_likelihood_correction(Matcher::result_t candidate, char* querySeq, con
         }
         else{
             //lik_two += 1;
-            lik_two += (0.99);
+            lik_two += (0.999);
         }
 
         // likMod += lik_one;
@@ -565,39 +581,48 @@ void calc_likelihood_correction(Matcher::result_t candidate, char* querySeq, con
 
     }
 
-    unsigned int k_len = candidate.alnLength;
-    double likAlnLen = std::round(likMod/k_len * 1000.0f) / 1000.0f; 
+    // unsigned int k_len = candidate.alnLength;
+    double likAlnLen = likMod/static_cast<float>(minExt); 
+    //double likAlnLen = std::round(likMod/minExt * 1000.0f) / 1000.0f; 
+    
     //double likAlnLen = 4 * (likMod/k_len);
-    likMod1 = std::round(likMod1/k_len * 1000.0f) / 1000.0f; 
-    likMod2 = std::round(likMod2/k_len * 1000.0f) / 1000.0f; 
-    float likFin = std::min(likMod1, likMod2);
+    likMod1 = likMod1/static_cast<float>(minExt); 
+    likMod2 = likMod2/static_cast<float>(minExt); 
+    // float likFin = std::min(likMod1, likMod2);
 
-    float insideSeqId = getSubSeqId(candidate, querySeq, targetSeq);
+    float obsSeqId = static_cast<float>(countMatch)/static_cast<float>(minExt);
+    float obsRySeqId = static_cast<float>(countRyMatch)/static_cast<float>(minExt);
+    int sumMatches = countMatch + countMismatch;
+
+    // float insideSeqId = getSubSeqId(candidate, querySeq, targetSeq);
 
     //if ( candidate.seqId < likFin )
-    if ( qKey == 4631784 )
-    //if ( false )
+    // if ( qKey == 4631784 )
+    if ( obsRySeqId < 0.999 && obsSeqId < std::min(likMod1, likMod2) )
     //if ( randAln > likMod )
     {
         std::cerr << "\n";
         std::cerr << "q_full\t" << querySeq << std::endl;
         std::cerr << "t_full\t" << targetSeq << std::endl;
-        std::cerr << "q_overlap\t" << queryOverlap << std::endl;
-        std::cerr << "t_overlap\t" << targetOverlap << std::endl;
-        std::cerr << "seqId:\t" << candidate.seqId << std::endl;
-        std::cerr << "subSeqId:\t" << insideSeqId << std::endl;
-        std::cerr << "rySeqId:\t" << candidate.rySeqId << std::endl;
+        //std::cerr << "q_overlap\t" << queryOverlap << std::endl;
+        //std::cerr << "t_overlap\t" << targetOverlap << std::endl;
+        std::cerr << "Aligned seqId:\t" << candidate.seqId << std::endl;
+        std::cerr << "Observed seqId:\t" << obsSeqId << std::endl;
+        //std::cerr << "subSeqId:\t" << insideSeqId << std::endl;
+        //std::cerr << "rySeqId:\t" << candidate.rySeqId << std::endl;
         std::cerr << "likMod:\t" << likAlnLen << std::endl;
         std::cerr << "likMod1:\t" << likMod1 << std::endl;
         std::cerr << "likMod2:\t" << likMod2 << std::endl;
-        std::cerr << "likFin:\t" << likFin << std::endl;
+        std::cerr << "minExt:\t" << minExt << std::endl;
+        std::cerr << "sumMatch:\t" << sumMatches << std::endl;
+        //std::cerr << "likFin:\t" << likFin << std::endl;
         std::cerr << "M and MM:\t" << countMatch << "\t" << countMismatch << std::endl;
         std::cerr << "TdbKey,Tlen:\t" << candidate.dbKey << "\t" << candidate.dbLen << std::endl;
-        std::cerr << "query length:\t" << candidate.qLen << std::endl;
+        //std::cerr << "query length:\t" << candidate.qLen << std::endl;
         // std::cerr << "spurious:\t" << likSpurious << std::endl;
         // std::cerr << "ratio space" << std::endl;
         // std::cerr << "ratio lik/(lik+random):\t" << ratioLog << std::endl;
-        std::cerr << "alnLen:\t" << candidate.alnLength << std::endl;
+        //std::cerr << "alnLen:\t" << candidate.alnLength << std::endl;
         //std::cerr << "ratio penal lik/(lik+random)  " << ratioLog2  << "  " << exp(ratioLog2) << std::endl;
         std::cerr << "\n";
     }    

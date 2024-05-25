@@ -1,5 +1,5 @@
 #include "nuclassembleUtil.h"
-const double SMOOTHING_VALUE = 0.0001;
+const double SMOOTHING_VALUE = 0.001;
 
 #define DEBUG_CORR
 
@@ -14,8 +14,8 @@ int mostLikeliBaseRead(const int baseInQuery, int qIter, std::vector<countDeamCo
     for ( int qBase=0; qBase<4; qBase++ )
     {
         double qBaseLik = 0;
-        long double qBaseErr = 0;
-        qBaseErr = seqErrMatch.p[qBase][baseInQuery];
+        //long double qBaseErr = 0;
+        //qBaseErr = seqErrMatch.p[qBase][baseInQuery];
         //double qBaseLogLik = 0;
         for (int tBase=0; tBase < 4; tBase++)
         {
@@ -33,8 +33,10 @@ int mostLikeliBaseRead(const int baseInQuery, int qIter, std::vector<countDeamCo
 
                 int covDeam = deamVec[qIter].count[tBase][l];
                 int numReverse = countRevs[qIter].count[tBase][l];
-                qBaseLik += (covDeam - numReverse)*( log( baseFreqs[qBase] ) + log(qBaseErr) + log(deamPattern) );
-                qBaseLik += numReverse*( log( baseFreqs[qBase] ) + log(qBaseErr) + log(deamPatternRev) );
+                //qBaseLik += (covDeam - numReverse)*( log( baseFreqs[qBase] ) + log(qBaseErr) + log(deamPattern) );
+                //qBaseLik += numReverse*( log( baseFreqs[qBase] ) + log(qBaseErr) + log(deamPatternRev) );
+                qBaseLik += (covDeam - numReverse)*( log( baseFreqs[qBase] ) + log(deamPattern) );
+                qBaseLik += numReverse*( log( baseFreqs[qBase] ) + log(deamPatternRev) );
             }
         }
         baseLikelis.push_back(qBaseLik);
@@ -142,10 +144,6 @@ int doCorrection(LocalParameters &par) {
         long double seqErrCorrection= 0.01;
         getSeqErrorProf(seqErrMatch, seqErrCorrection);
 
-        float rymerThresh = par.correctionThreshold;
-        //float rymerThresh = 0.95;
-
-
         int reverse = 0;
         int good = 0;
 
@@ -224,7 +222,8 @@ int doCorrection(LocalParameters &par) {
             std::vector<Matcher::result_t> mgeCandiLeft;
 
             // define thresholds to include extension candidates for the mge-identifier
-            float alnSeqIdThr = par.seqIdThr;
+            // float alnSeqIdThr = par.seqIdThr;
+            float alnSeqIdThr = 0.999;
             //unsigned int extLen = 150;
 
             //set threshold when to declare an mge
@@ -345,6 +344,12 @@ int doCorrection(LocalParameters &par) {
                     }
 
                     // calculate the sequence identity
+
+                    // Here we want a function that calculates the expected similarity of the extension
+
+                    // calc_likelihood_correction(rightLongestExt, righty, rightLongestExtSeq, rightExtCandiSeq, subDeamDiNuc, seqErrMatch);
+
+
                     unsigned int othersExtLen = ( righty.dbLen - righty.alnLength < numBaseCompare ) ? righty.dbLen - righty.alnLength : numBaseCompare;
                     int idCnt = 0;
                     int idRyCnt = 0;
@@ -506,9 +511,11 @@ int doCorrection(LocalParameters &par) {
                 float ryId = getRYSeqId(targetRead, querySeq,  tSeq, ryMap);
                 targetRead.rySeqId = ryId;
 
-                if ( targetRead.alnLength <= 100)
-                {
-                    rymerThresh = (static_cast<float>(targetRead.alnLength) - 2) / static_cast<float>(targetRead.alnLength);
+                float rymerThresh = par.correctionThreshold;
+                //float rymerThresh = 0.95;
+                if ( targetRead.alnLength <= 100){
+                    rymerThresh = (static_cast<float>(targetRead.alnLength) - 1) / static_cast<float>(targetRead.alnLength);
+                    rymerThresh = std::floor(rymerThresh * 1000) / 1000;
                 }
 
                 if ( queryKey == 4631784 ){
@@ -639,6 +646,13 @@ int doCorrection(LocalParameters &par) {
                 float ryId = getRYSeqId(target, querySeq,  tSeq, ryMap);
                 target.rySeqId = ryId;
 
+                float rymerThresh = par.correctionThreshold;
+                //float rymerThresh = 0.95;
+                if ( target.alnLength <= 100){
+                    rymerThresh = (static_cast<float>(target.alnLength) - 1) / static_cast<float>(target.alnLength);
+                    rymerThresh = std::floor(rymerThresh * 1000) / 1000;
+                }
+
                 //if ( targetWasExt == false && isNotIdentity && target.rySeqId >= rymerThresh && target.seqId >= par.seqIdThr && target.alnLength >= 30 && ){
                 //if ( targetWasExt == false && target.rySeqId >= rymerThresh && target.seqId >= par.seqIdThr && target.alnLength >= 30 ) {
                 if ( target.rySeqId >= rymerThresh && target.seqId >= par.seqIdThr && target.alnLength >= 30 ) {
@@ -682,12 +696,11 @@ int doCorrection(LocalParameters &par) {
             for ( unsigned int qPos = 0; qPos < querySeqLen; qPos++ )
             {
                 int qBase = nucleotideMap[querySeq[qPos]];
-                // // If query is a read, add it to the coverage as it should be included in the voting
-                // if ( totalCov[qPos] > 0 && qWasExtended == false )
-                // {
                 // Getting coverage of each base A,C,G,T at position "pos" in alignment (=overlap)
-                queryCov[qPos][qBase] += 1;
-                totalCov[qPos] += 1;
+                if ( qWasExtended == false ){
+                    queryCov[qPos][qBase] += 1;
+                    totalCov[qPos] += 1;
+                }
 
                 if ( qPos < 5 ){
                     deamVec[qPos].count[qBase][qPos] += 1;
@@ -699,10 +712,8 @@ int doCorrection(LocalParameters &par) {
                 else{
                     deamVec[qPos].count[qBase][5] += 1;
                 }
-                // }
-
                
-                if ( totalCov[qPos] <= 1){
+                if ( totalCov[qPos] < 1){
                     corrQuery[qPos] = querySeq[qPos];
                 }
                 // if the sequence is a contig and has not been extended or corrected then just go by coverage:
@@ -744,7 +755,7 @@ int doCorrection(LocalParameters &par) {
                     int newBaseCandidate = mostLikeliBaseRead(qBase, qPos, deamVec, revCount, subDeamDiNuc, subDeamDiNucRev, seqErrMatch);
                     // if ((qBase == 3 && (newBaseCandidate == 1 || newBaseCandidate == 3)) ||
                     //     (qBase == 0 && (newBaseCandidate == 0 || newBaseCandidate == 2))) {
-                        newBase = newBaseCandidate;
+                    newBase = newBaseCandidate;
                     //}
 
                     corrQuery[qPos] = "ACGT"[newBase];

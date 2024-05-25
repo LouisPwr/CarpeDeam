@@ -126,7 +126,7 @@ float getRYSeqId(Matcher::result_t & res, char* querySeq,  char* targetSeq, std:
 
 void calc_likelihood(scorePerRes & scoredRes, char* querySeq, const char* targetSeq, std::vector<diNucleotideProb> & subDeamDiNuc, unsigned int maxAln, float randAlnPenal, diNucleotideProb & seq_err_match, float excessPenal);
 
-void calc_likelihood_correction(Matcher::result_t candidate, char* querySeq, const char* targetSeq, std::vector<diNucleotideProb> & subDeamDiNuc, diNucleotideProb & seqErrMatch, unsigned int qKey);
+void calc_likelihood_correction(Matcher::result_t rightLongestCandi, Matcher::result_t candidate, std::string querySeq, std::string targetSeq, std::vector<diNucleotideProb> & subDeamDiNuc, diNucleotideProb & seqErrMatch);
 
 int doNuclAssembly1(LocalParameters &par);
 
