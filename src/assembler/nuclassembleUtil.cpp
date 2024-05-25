@@ -455,11 +455,11 @@ void calc_likelihood_correction(Matcher::result_t rightLongestCandi, Matcher::re
         subdeam_lookup[candidate.dbLen - 5 + i] = subDeamDiNuc[ 6 + i];
     }
 
-    // longest extension is
+    // shortest extension is
     unsigned int minExt = candidate.dbLen - candidate.alnLength;
 
     // We want to iterate over the extension paths only
-    for ( unsigned int t = 0; t <= minExt; t++ )
+    for ( unsigned int t = 0; t < minExt; t++ )
     {   
         double lik_one = 0;
         double lik_two = 0;
@@ -485,14 +485,14 @@ void calc_likelihood_correction(Matcher::result_t rightLongestCandi, Matcher::re
         //     std::cerr << "t_overlap\t" << targetOverlap << std::endl;
         // }
 
-        if ( tBase != qBase ){
-            for (int query = 0; query<4; query++){
-                // seq error in obs. qBase:
-                long double qBaseErr = 0;
-                qBaseErr = seqErrMatch.p[query][qBase];
+        // if ( tBase != qBase ){
+            // for (int query = 0; query<4; query++){
+            //     // seq error in obs. qBase:
+            //     long double qBaseErr = 0;
+            //     qBaseErr = seqErrMatch.p[query][qBase];
 
                 for (int target = 0; target<4; target++){
-                    double match_lik = std::max(static_cast<long double>(SMOOTHING_VALUE), tProbs.p[query][target]);
+                    double match_lik = std::max(static_cast<long double>(SMOOTHING_VALUE), tProbs.p[qBase][target]);
 
                     // seq error in obs. tBase:
                     long double tBaseErr = 0;
@@ -507,15 +507,16 @@ void calc_likelihood_correction(Matcher::result_t rightLongestCandi, Matcher::re
                     // }
 
                     //lik_one += std::exp(std::log(baseFreqs[query])+std::log(qBaseErr)+std::log(tBaseErr)+std::log(match_lik));
-                    lik_one += std::exp(std::log(qBaseErr)+std::log(tBaseErr)+std::log(match_lik));
+                    //lik_one += std::exp(std::log(qBaseErr)+std::log(tBaseErr)+std::log(match_lik));
+                    lik_one += std::exp(std::log(tBaseErr)+std::log(match_lik));
 
                 }
-            }
-        }
-        else{
-            //lik_one += 1;
-            lik_one += (0.999);
-        }
+            // }
+        // }
+        // else{
+        //     //lik_one += 1;
+        //     lik_one += (0.999);
+        // }
 
         if (tBase == qBase){
             countMatch++;
@@ -541,14 +542,14 @@ void calc_likelihood_correction(Matcher::result_t rightLongestCandi, Matcher::re
         //     std::cerr << "t_overlap\t" << targetOverlap << std::endl;
         // }
 
-        if ( tBase2 != qBase2 ){
-            for (int query = 0; query<4; query++){
+        // if ( tBase2 != qBase2 ){
+            // for (int query = 0; query<4; query++){
                 // seq error in obs. qBase:
-                long double qBaseErr = 0;
-                qBaseErr = seqErrMatch.p[query][qBase2];
+                // long double qBaseErr = 0;
+                // qBaseErr = seqErrMatch.p[query][qBase2];
 
                 for (int target = 0; target<4; target++){
-                    double match_lik = std::max(static_cast<long double>(SMOOTHING_VALUE), tProbs.p[query][target]);
+                    double match_lik = std::max(static_cast<long double>(SMOOTHING_VALUE), tProbs.p[qBase2][target]);
 
                     // seq error in obs. tBase:
                     long double tBaseErr = 0;
@@ -562,16 +563,16 @@ void calc_likelihood_correction(Matcher::result_t rightLongestCandi, Matcher::re
                     //         << tBaseErr << "\t" << match_lik << "\n";
                     // }
 
-                    //lik_one += std::exp(std::log(baseFreqs[query])+std::log(qBaseErr)+std::log(tBaseErr)+std::log(match_lik));
-                    lik_two += std::exp(std::log(qBaseErr)+std::log(tBaseErr)+std::log(match_lik));
+                    //lik_two += std::exp(std::log(qBaseErr)+std::log(tBaseErr)+std::log(match_lik));
+                    lik_two += std::exp(std::log(tBaseErr)+std::log(match_lik));
 
                 }
-            }
-        }
-        else{
-            //lik_two += 1;
-            lik_two += (0.999);
-        }
+            // }
+        // }
+        // else{
+        //     //lik_two += 1;
+        //     lik_two += (0.999);
+        // }
 
         // likMod += lik_one;
         likMod += (0.5 * lik_one);
@@ -598,7 +599,9 @@ void calc_likelihood_correction(Matcher::result_t rightLongestCandi, Matcher::re
 
     //if ( candidate.seqId < likFin )
     // if ( qKey == 4631784 )
-    if ( obsRySeqId < 0.999 && obsSeqId < std::min(likMod1, likMod2) )
+    //if ( obsRySeqId < 0.999 && obsSeqId < std::max(likMod1, likMod2) )
+    if ( obsRySeqId )
+    //if ( candidate.dbKey == 66487)
     //if ( randAln > likMod )
     {
         std::cerr << "\n";

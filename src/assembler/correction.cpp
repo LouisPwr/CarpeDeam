@@ -346,8 +346,8 @@ int doCorrection(LocalParameters &par) {
                     // calculate the sequence identity
 
                     // Here we want a function that calculates the expected similarity of the extension
-
-                    // calc_likelihood_correction(rightLongestExt, righty, rightLongestExtSeq, rightExtCandiSeq, subDeamDiNuc, seqErrMatch);
+                    //std::cerr << "Contig: " << querySeq << std::endl;
+                    calc_likelihood_correction(rightLongestExt, righty, rightLongestExtSeq, rightExtCandiSeq, subDeamDiNuc, seqErrMatch);
 
 
                     unsigned int othersExtLen = ( righty.dbLen - righty.alnLength < numBaseCompare ) ? righty.dbLen - righty.alnLength : numBaseCompare;
