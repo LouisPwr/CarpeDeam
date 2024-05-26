@@ -104,7 +104,7 @@ while [ $STEP -lt $NUM_IT ]; do
             # shellcheck disable=SC2086
             "$MMSEQS" kmermatcher "$INPUT" "${TMP_PATH}/pref_${STEP}" ${KMERMATCHER_PAR} \
                 || fail "Kmer matching step died"
-            #deleteIncremental "$PREV_KMER_PREF"
+            deleteIncremental "$PREV_KMER_PREF"
             touch "${TMP_PATH}/pref_${STEP}.done"
             PREV_KMER_PREF="${TMP_PATH}/pref_${STEP}"
         fi
@@ -115,7 +115,7 @@ while [ $STEP -lt $NUM_IT ]; do
             "$MMSEQS" rescorediagonal "$INPUT" "$INPUT" "${TMP_PATH}/pref_${STEP}" "${TMP_PATH}/aln_${STEP}" ${UNGAPPED_ALN_PAR} \
                 || fail "Ungapped alignment step died"
             touch "${TMP_PATH}/aln_${STEP}.done"
-            #deleteIncremental "$PREV_ALN"
+            deleteIncremental "$PREV_ALN"
             PREV_ALN="${TMP_PATH}/aln_${STEP}"
         fi
 
@@ -126,7 +126,7 @@ while [ $STEP -lt $NUM_IT ]; do
             "$MMSEQS" ancient_correction "$INPUT" "${TMP_PATH}/aln_${STEP}" "${TMP_PATH}/correction_${STEP}" ${ASSEMBLE_RESULT_PAR} \
                 || fail "ancient_correction died"
             touch "${TMP_PATH}/correction_${STEP}.done"
-            #deleteIncremental "$PREV_CORR"
+            deleteIncremental "$PREV_CORR"
             PREV_CORR="${TMP_PATH}/correction_${STEP}"
         fi
 
@@ -136,8 +136,8 @@ while [ $STEP -lt $NUM_IT ]; do
             "$MMSEQS" ancient_read_assemble "${TMP_PATH}/correction_${STEP}" "${TMP_PATH}/aln_${STEP}" "${TMP_PATH}/assembly_reads_${STEP}" ${ASSEMBLE_RESULT_PAR} \
                 || fail "ancient_read_assemble step died"
             touch "${TMP_PATH}/assembly_reads_${STEP}.done"
-            #deleteIncremental "$PREV_ASSEMBLY_READS"
-            #deleteIncremental "$PREV_ASSEMBLY_READS_STEP"
+            deleteIncremental "$PREV_ASSEMBLY_READS"
+            deleteIncremental "$PREV_ASSEMBLY_READS_STEP"
             PREV_ASSEMBLY_READS="${TMP_PATH}/assembly_reads_${STEP}"
             PREV_ASSEMBLY_READS_STEP="${TMP_PATH}/assembly_reads_${STEP}"
         fi
@@ -152,7 +152,7 @@ while [ $STEP -lt $NUM_IT ]; do
             # shellcheck disable=SC2086
             "$MMSEQS" rymermatcher "$INPUT" "${TMP_PATH}/pref_asm_${STEP}" ${KMERMATCHER_PAR} \
             || fail "Kmer matching step died"
-            #deleteIncremental "$PREV_KMER_ASM_PREF"
+            deleteIncremental "$PREV_KMER_ASM_PREF"
             touch "${TMP_PATH}/pref_asm_${STEP}.done"
             PREV_KMER_ASM_PREF="${TMP_PATH}/pref_asm_${STEP}"
         fi
@@ -163,7 +163,7 @@ while [ $STEP -lt $NUM_IT ]; do
             "$MMSEQS" rescorediagonal "$INPUT" "$INPUT" "${TMP_PATH}/pref_asm_${STEP}" "${TMP_PATH}/aln_asm_${STEP}" ${UNGAPPED_ALN_PAR} \
                 || fail "Ungapped alignment step died"
             touch "${TMP_PATH}/aln_asm_${STEP}.done"
-            #deleteIncremental "$PREV_ALN_ASM"
+            deleteIncremental "$PREV_ALN_ASM"
             PREV_ALN_ASM="${TMP_PATH}/aln_asm_${STEP}"
         fi
 
@@ -174,7 +174,7 @@ while [ $STEP -lt $NUM_IT ]; do
             "$MMSEQS" ancient_correction "$INPUT" "${TMP_PATH}/aln_asm_${STEP}" "${TMP_PATH}/correction_${STEP}" ${ASSEMBLE_RESULT_PAR} \
                 || fail "ancient_correction died"
             touch "${TMP_PATH}/correction_${STEP}.done"
-            #deleteIncremental "$PREV_CORR"
+            deleteIncremental "$PREV_CORR"
             PREV_CORR="${TMP_PATH}/correction_${STEP}"
         fi
 
@@ -184,8 +184,8 @@ while [ $STEP -lt $NUM_IT ]; do
             "$MMSEQS" ancient_contig_merge "${TMP_PATH}/correction_${STEP}" "${TMP_PATH}/aln_asm_${STEP}" "${TMP_PATH}/assembly_contigs_${STEP}" ${ASSEMBLE_RESULT_PAR} \
                 || fail "ancient_contig_merge step died"
             touch "${TMP_PATH}/assembly_contigs_${STEP}.done"
-            #deleteIncremental "$PREV_CONTIG_ASSEMBLY"
-            #deleteIncremental "$PREV_CONTIG_ASSEMBLY_STEP"
+            deleteIncremental "$PREV_CONTIG_ASSEMBLY"
+            deleteIncremental "$PREV_CONTIG_ASSEMBLY_STEP"
         fi
 
         PREV_CONTIG_ASSEMBLY="${TMP_PATH}/assembly_contigs_${STEP}"

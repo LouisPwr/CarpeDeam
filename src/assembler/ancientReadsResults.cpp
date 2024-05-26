@@ -1,8 +1,8 @@
 #include "nuclassembleUtil.h"
 
-#define DEBUGEXT
+//#define DEBUGEXT
 
-#define LIKELI
+//#define LIKELI
 
 std::vector<unsigned int> getMaxAlnLen(std::vector<Matcher::result_t> &alignments, unsigned int & queryKey)
 {

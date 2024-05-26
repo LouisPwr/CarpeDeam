@@ -19,7 +19,7 @@
 #include <omp.h>
 #endif
 
-#define DEBUGCOV
+//#define DEBUGCOV
 
 
 class CompareNuclResultByScoreContigs {
@@ -272,7 +272,7 @@ int doNuclAssembly2(LocalParameters &par) {
             //unsigned int extLen = 150;
 
             //set threshold when to declare an mge
-            float mgeSeqId = 0.95;
+            float mgeSeqId = 0.9;
             float mgeRySeqId = 0.99;
 
             //set number of bases in overlap to comapare after the alignment ends
@@ -292,7 +292,6 @@ int doNuclAssembly2(LocalParameters &par) {
                 const bool leftStart = res.qStartPos == 0   && (res.qEndPos != static_cast<int>(res.qLen)-1);
                 const bool isNotIdentity = (dbKey != queryKey);
 
-
                 // distinguish between right and left here
 
                 unsigned int dbStartPos = res.dbStartPos;
@@ -300,40 +299,43 @@ int doNuclAssembly2(LocalParameters &par) {
                 unsigned int qStartPos = res.qStartPos;
                 unsigned int qEndPos = res.qEndPos;
                 unsigned int targetId = sequenceDbr->getId(res.dbKey);
+                bool targetWasExt = sequenceDbr->getExtData(targetId);
                 if (targetId == UINT_MAX) {
                     Debug(Debug::ERROR) << "Could not find targetId  " << res.dbKey
                                         << " in database " << sequenceDbr->getDataFileName() << "\n";
                     EXIT(EXIT_FAILURE);
                 }
-                unsigned int targetSeqLen = sequenceDbr->getSeqLen(targetId);
+                
+                if (targetWasExt == true){
+                    unsigned int targetSeqLen = sequenceDbr->getSeqLen(targetId);
 
-                // TODO: Add min overlap len and max target seq len
-                if ((rightStart || leftStart) && notRightStartAndLeftStart && isNotIdentity){
+                    // TODO: Add min overlap len and max target seq len
+                    if ((rightStart || leftStart) && notRightStartAndLeftStart && isNotIdentity){
 
-                    // count ALL right and left extensions; needed for pseudo stable kmer filter
-                    if (dbStartPos == 0 && qEndPos == (querySeqLen - 1)) {
-                        // right extension
-                        countRightExt++; 
-                    }
-                    else if (qStartPos == 0 && dbEndPos == (targetSeqLen - 1)) {
-                        // left extension
-                        countLeftExt++;
-                    }
-
-                    // count only the left and right extensions which extensions should be compared
-                    //if (res.seqId > alnSeqIdThr && (res.dbLen - res.alnLength <= extLen)){
-                    if (res.seqId > alnSeqIdThr){
+                        // count ALL right and left extensions; needed for pseudo stable kmer filter
                         if (dbStartPos == 0 && qEndPos == (querySeqLen - 1)) {
                             // right extension
-                            mgeCandiRight.push_back(res);
+                            countRightExt++; 
                         }
                         else if (qStartPos == 0 && dbEndPos == (targetSeqLen - 1)) {
                             // left extension
-                            mgeCandiLeft.push_back(res);
+                            countLeftExt++;
+                        }
+
+                        // count only the left and right extensions which extensions should be compared
+                        //if (res.seqId > alnSeqIdThr && (res.dbLen - res.alnLength <= extLen)){
+                        if (res.seqId > alnSeqIdThr){
+                            if (dbStartPos == 0 && qEndPos == (querySeqLen - 1)) {
+                                // right extension
+                                mgeCandiRight.push_back(res);
+                            }
+                            else if (qStartPos == 0 && dbEndPos == (targetSeqLen - 1)) {
+                                // left extension
+                                mgeCandiLeft.push_back(res);
+                            }
                         }
                     }
                 }
-
             }
 
             // Now we iterate through the left and right extensions
