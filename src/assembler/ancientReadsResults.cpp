@@ -62,7 +62,7 @@ scorePerRes r_s_pair(Matcher::result_t res, char* querySeq, char* targetSeq, std
 
     std::vector<diNucleotideProb> subDeamDiNucRef = res.isRevToAlignment ? subDeamDiNucRev : subDeamDiNuc;
 
-    calc_likelihood(fiveToThree, querySeq, targetSeq, subDeamDiNucRef, maxOverlap, randAlnPenal, seqErrMatch, excessPenal);
+    calcLikelihood(fiveToThree, querySeq, targetSeq, subDeamDiNucRef, maxOverlap, randAlnPenal, seqErrMatch, excessPenal);
     // Modifying ThreeToFive
     //std::cerr << " REV " << std::endl;
     //calc_likelihood(threeToFive, querySeq, targetSeq, subDeamDiNucRev, maxOverlap, isRightOverlap, randAlnPenal, seqErrMatch, seqErrMis);

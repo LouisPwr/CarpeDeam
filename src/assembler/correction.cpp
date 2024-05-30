@@ -1,21 +1,28 @@
 #include "nuclassembleUtil.h"
 const double SMOOTHING_VALUE = 0.001;
 
-//#define DEBUG_CORR
+#define DEBUGCORR
+//#define DEBUCORR2
 
 int mostLikeliBaseRead(const int baseInQuery, const int qIter, const std::vector<countDeamCov> & deamVec, const std::vector<countDeamCov> & countRevs, const std::vector<diNucleotideProb> & subDeamDiNuc, const std::vector<diNucleotideProb> & subDeamDiNucRev, const diNucleotideProb & seqErrMatch)
 {
-    std::vector<double> baseLikelis; 
-
     // Initial likelihod of qBase (either A,C,G or T)
     //std::vector<float> baseFreqs = { 0.23554, 0.26446, 0.26446, 0.23554 };
     std::vector<float> baseFreqs = { 0.25, 0.25, 0.25, 0.25 };
+    std::vector<double> baseLikelis(4, 0.0); 
+
+    // Precompute invariant logs
+    std::vector<double> logBaseFreqs(4);
+    std::vector<double> logQBaseErr(4);
+    for (int q = 0; q < 4; q++) {
+        logBaseFreqs[q] = std::log(baseFreqs[q]);  // Assuming baseFreqs are all 0.25
+        //logQBaseErr[q] = std::log(seqErrMatch.p[q][baseInQuery]);
+        logQBaseErr[q] = std::log(seqErrMatch.p[q][baseInQuery]);
+    }
 
     for ( int qBase=0; qBase<4; qBase++ )
     {
         double qBaseLik = 0;
-        long double qBaseErr = 0;
-        qBaseErr = seqErrMatch.p[qBase][baseInQuery];
         for (int tBase=0; tBase < 4; tBase++)
         {
             // The vector deamVec contains the counts of deaminations per position;
@@ -32,25 +39,33 @@ int mostLikeliBaseRead(const int baseInQuery, const int qIter, const std::vector
 
                 int covDeam = deamVec[qIter].count[tBase][l];
                 int numReverse = countRevs[qIter].count[tBase][l];
-                //qBaseLik += (covDeam - numReverse)*( log( baseFreqs[qBase] ) + log(qBaseErr) + log(deamPattern) );
-                //qBaseLik += numReverse*( log( baseFreqs[qBase] ) + log(qBaseErr) + log(deamPatternRev) );
-                qBaseLik += (covDeam - numReverse)*( log( baseFreqs[qBase] ) + log(qBaseErr) + log(deamPattern) );
-                qBaseLik += numReverse*( log( baseFreqs[qBase] ) + log(deamPatternRev) );
+                double logDeamPattern = std::log(deamPattern);
+                double logDeamPatternRev = std::log(deamPatternRev);
+
+                // qBaseLik += (covDeam - numReverse) * (logQBaseErr[qBase] + logDeamPattern);
+                // qBaseLik += numReverse * (logQBaseErr[qBase] + logDeamPatternRev);
+                qBaseLik += (covDeam - numReverse) * (logQBaseErr[tBase] + logDeamPattern);
+                qBaseLik += numReverse * (logQBaseErr[tBase] + logDeamPatternRev);
             }
         }
-        baseLikelis.push_back(qBaseLik);
+        baseLikelis[qBase] = qBaseLik;
     }
 
-    //for (int i = 0; i<4; i++)
-    //{
-    //    std::cerr << "Base:\t" << i << "\tLikeli\t" << baseLikelis[i] << std::endl;
-    //
-/*     std::cerr << "IdMax:\t" << idxMax << std::endl;
-    std::cerr << '\n' << std::endl; */
     auto maxLik = std::max_element(baseLikelis.begin(), baseLikelis.end());
     int idxMax = std::distance(baseLikelis.begin(), maxLik);
+
+    // for (int i = 0; i<4; i++)
+    // {
+    //    std::cerr << "Base:\t" << i << "\tLikeli\t" << baseLikelis[i] << std::endl;
+    // }
+    
+    // std::cerr << "IdMax:\t" << idxMax << std::endl;
+    // std::cerr << "baseInQuery\t" << baseInQuery << std::endl;
+    // std::cerr << '\n' << std::endl;
+
     return idxMax;
 }
+
 
 
 
@@ -73,6 +88,7 @@ int doCorrection(LocalParameters &par) {
         subMat = new SubstitutionMatrix(par.scoringMatrixFile.aminoacids, 2.0, 0.0);
     }
 
+    SubstitutionMatrix::FastMatrix fastMatrix = SubstitutionMatrix::createAsciiSubMat(*subMat);
     EvalueComputation evaluer(sequenceDbr->getAminoAcidDBSize(), subMat);
 
     unsigned char * wasExtended = new unsigned char[sequenceDbr->getSize()];
@@ -84,7 +100,7 @@ int doCorrection(LocalParameters &par) {
     std::string high5 = userInput + "5p.prof";
     std::string high3 = userInput + "3p.prof";
 
-#ifdef DEBUG_CORR
+#ifdef DEBUGCORR
     auto currentTime = std::chrono::system_clock::now();
     std::time_t time = std::chrono::system_clock::to_time_t(currentTime);
 
@@ -146,6 +162,8 @@ int doCorrection(LocalParameters &par) {
 
 #pragma omp for schedule(dynamic, 100)
         for (size_t id = 0; id < sequenceDbr->getSize(); id++) {
+            //auto startQuery = std::chrono::high_resolution_clock::now();
+            double sumLikeli = 0;
 
             progress.updateProgress();
 
@@ -159,6 +177,8 @@ int doCorrection(LocalParameters &par) {
             Matcher::readAlignmentResults(alignments, alnData);
 
             bool qWasExtended = sequenceDbr->getExtData(id);
+
+            float avCov = 0;
 
             for (size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
 
@@ -183,7 +203,9 @@ int doCorrection(LocalParameters &par) {
                         alignments[alnIdx].isRevToAlignment = false;
                     }
                 }
+                avCov += alignments[alnIdx].alnLength ;
             }
+            avCov = static_cast<float>(avCov)/querySeqLen;
 
             /////////////////////////////////////////////////////////////////////////////////////////////////////////
             // Need to change the deams as they change for each target !!! //
@@ -208,295 +230,14 @@ int doCorrection(LocalParameters &par) {
             }
 
 
-// MGE marker
-            bool mgeFoundRight = false;
-            bool mgeFoundLeft = false;
-
-            std::vector<Matcher::result_t> mgeCandiRight;
-            std::vector<Matcher::result_t> mgeCandiLeft;
-
-            // define thresholds to include extension candidates for the mge-identifier
-            // float alnSeqIdThr = par.seqIdThr;
-            //float alnSeqIdThr = 0.999;
-            //unsigned int extLen = 150;
-
-            //set threshold when to declare an mge
-            // float mgeSeqId = 0.9;
-            // float mgeRySeqId = 0.99;
-
-            //set number of bases in overlap to comapare after the alignment ends
-            //unsigned int numBaseCompare = 50;
-
-            for (size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
-
-                Matcher::result_t res = alignments[alnIdx];
-                size_t dbKey = res.dbKey;
-                unsigned int resId = sequenceDbr->getId(res.dbKey);
-                const bool notRightStartAndLeftStart = !(res.dbStartPos == 0 && res.qStartPos == 0 );
-                const bool rightStart = res.dbStartPos == 0 && (res.dbEndPos != static_cast<int>(res.dbLen)-1);
-                const bool leftStart = res.qStartPos == 0   && (res.qEndPos != static_cast<int>(res.qLen)-1);
-                const bool isNotIdentity = (dbKey != queryKey);
-
-
-                // distinguish between right and left here
-
-                unsigned int dbStartPos = res.dbStartPos;
-                unsigned int dbEndPos = res.dbEndPos;
-                unsigned int qStartPos = res.qStartPos;
-                unsigned int qEndPos = res.qEndPos;
-                unsigned int targetId = sequenceDbr->getId(res.dbKey);
-                if (targetId == UINT_MAX) {
-                    Debug(Debug::ERROR) << "Could not find targetId  " << res.dbKey
-                                        << " in database " << sequenceDbr->getDataFileName() << "\n";
-                    EXIT(EXIT_FAILURE);
-                }
-                unsigned int targetSeqLen = sequenceDbr->getSeqLen(targetId);
-
-                // TODO: Add min overlap len and max target seq len
-                if ((rightStart || leftStart) && notRightStartAndLeftStart && isNotIdentity){
-
-                    char *resSeq = sequenceDbr->getData(resId, thread_idx); 
-                    std::string resSeqStr;
-                    float ryId;
-
-                    float rymerThresh = par.correctionThreshold;
-                    //float rymerThresh = 0.95;
-                    if ( res.alnLength <= 100){
-                        rymerThresh = (static_cast<float>(res.alnLength) - 1) / static_cast<float>(res.alnLength);
-                        rymerThresh = std::floor(rymerThresh * 1000) / 1000;
-                    }
-
-                    if ( res.isRevToAlignment ) {
-                        char *resSeqTmp = getNuclRevFragment(resSeq, res.dbLen, (NucleotideMatrix *) subMat);
-                        ryId = getRYSeqId(res, querySeq, resSeqTmp, ryMap);
-                        delete[] resSeqTmp;
-                    }
-                    else {
-                        ryId = getRYSeqId(res, querySeq, resSeq, ryMap);
-                    }
-
-                    if ( ryId >= rymerThresh ){
-                        // count only the left and right extensions which extensions should be compared
-                        //if (res.seqId > alnSeqIdThr && (res.dbLen - res.alnLength <= extLen)){
-                        //if (res.seqId >= alnSeqIdThr){
-                        if (dbStartPos == 0 && qEndPos == (querySeqLen - 1)) {
-                            // right extension
-                            mgeCandiRight.push_back(res);
-                        }
-                        else if (qStartPos == 0 && dbEndPos == (targetSeqLen - 1)) {
-                            // left extension
-                            mgeCandiLeft.push_back(res);
-                        }
-                        //}
-                    }
-                }
-            }
-
-            // Now we iterate through the left and right extensions
-            // Get the longest extension and align all remaining candidates
-            // right extensions
-            if (mgeCandiRight.size() > 1){
-                
-                // Get extension candidate with the longest extension 
-                Matcher::result_t rightLongestExt = mgeCandiRight.front();
-                for (unsigned int rightCandis = 0; rightCandis < mgeCandiRight.size(); rightCandis++){
-                    rightLongestExt = (mgeCandiRight[rightCandis].dbLen - mgeCandiRight[rightCandis].alnLength >= rightLongestExt.dbLen - rightLongestExt.alnLength) ? mgeCandiRight[rightCandis] : rightLongestExt;
-                }
-
-                // now retrieve the sequence of the longest extension in the correct orientation 
-                unsigned int rightLongestExtId = sequenceDbr->getId(rightLongestExt.dbKey);
-                unsigned int rightLongestExtLen = sequenceDbr->getSeqLen(rightLongestExtId);
-
-                char *rightLongestExtSequ = sequenceDbr->getData(rightLongestExtId, thread_idx);
-                std::string rightLongestExtSeq;
-
-                if ( rightLongestExt.isRevToAlignment ) {
-                    char *rightLongestExtSeqTmp = getNuclRevFragment(rightLongestExtSequ, rightLongestExtLen, (NucleotideMatrix *) subMat);
-                    rightLongestExtSeq = std::string(rightLongestExtSeqTmp, rightLongestExtLen);
-                    delete[] rightLongestExtSeqTmp;
-                }
-                else {
-                    rightLongestExtSeq = std::string(rightLongestExtSequ, rightLongestExtLen);
-                }
-
-                // Iterate through all candidates and compare to the longest
-                for (unsigned int rightRes = 0; rightRes < mgeCandiRight.size(); rightRes++){
-                    // now retrieve the other candidate extensions and get their sequences
-
-                    Matcher::result_t righty = mgeCandiRight[rightRes];
-
-                    unsigned int rightExtCandiId = sequenceDbr->getId(righty.dbKey);
-                    unsigned int rightExtCandiLen = sequenceDbr->getSeqLen(rightExtCandiId);
-
-                    if ( rightExtCandiId == rightLongestExtId ){
-                        continue;
-                    }
-
-                    char *rightExtCandiSequ = sequenceDbr->getData(rightExtCandiId, thread_idx);
-                    std::string rightExtCandiSeq;
-
-                    bool isBadCandi = false;
-                    if (righty.isRevToAlignment) {
-                        // Convert the reversed fragment to std::string
-                        char *rightExtCandiSeqTmp = getNuclRevFragment(rightExtCandiSequ, rightExtCandiLen, (NucleotideMatrix *)subMat);
-                        rightExtCandiSeq = std::string(rightExtCandiSeqTmp, rightExtCandiLen);
-                        delete[] rightExtCandiSeqTmp;
-                        // Here we calculate the epected similarity of the extension
-                        isBadCandi = calcLikelihoodCorrection(rightLongestExt, righty, rightLongestExtSeq, rightExtCandiSeq, subDeamDiNucRev, seqErrMatch, true);
-                    } else {
-                        // Directly convert the raw sequence to std::string
-                        rightExtCandiSeq = std::string(rightExtCandiSequ, rightExtCandiLen);
-                        // Here we calculate the epected similarity of the extension
-                        isBadCandi = calcLikelihoodCorrection(rightLongestExt, righty, rightLongestExtSeq, rightExtCandiSeq, subDeamDiNuc, seqErrMatch, true);
-                    }
-
-                    if ( isBadCandi ){
-                        mgeFoundRight = true;
-                        break;
-                    }
-                        // unsigned int othersExtLen = ( righty.dbLen - righty.alnLength < numBaseCompare ) ? righty.dbLen - righty.alnLength : numBaseCompare;
-                        // int idCnt = 0;
-                        // int idRyCnt = 0;
-                        // for (unsigned int rightPos = 0; rightPos < othersExtLen; ++rightPos) {
-                        //     idCnt += (rightLongestExtSeq[rightLongestExt.dbEndPos + rightPos] == rightExtCandiSeq[righty.dbEndPos + rightPos]) ? 1 : 0;
-                        //     idRyCnt += (ryMap[rightLongestExtSeq[rightLongestExt.dbEndPos + rightPos]] == ryMap[rightExtCandiSeq[righty.dbEndPos + rightPos]]) ? 1 : 0;
-                        // }
-
-                        // float seqId = static_cast<float>(idCnt) / othersExtLen;
-                        // float rySeqId = static_cast<float>(idRyCnt) / othersExtLen;
-
-                        // if ( seqId < mgeSeqId || rySeqId < mgeRySeqId ){
-                        // //if ( seqId < mgeSeqId ){
-                        //     // We believe that we found an MGE so do not allow to extend to right at all!!
-                        //     // std::cerr << "mge RIGHT found:\t" << std::endl;
-                        //     // std::cerr << "main query\t" << querySeq;
-                        //     // std::cerr << "rightLongestExtSeq\t" << rightLongestExtSeq << std::endl;
-                        //     // std::cerr << "rightExtCandiSeq\t" << rightExtCandiSeq << std::endl;
-                        //     // std::cerr << "seqId:\t" << seqId << std::endl;
-                        //     // std::cerr << "rySeqId:\t" << rySeqId << std::endl;
-                        //     // std::cerr << "Compare len:\t" << othersExtLen << std::endl;
-                        //     // std::cerr << "rightLongestExt.dbStartPos\t" << rightLongestExt.dbStartPos << std::endl;
-                        //     mgeFoundRight = true;
-                        //     break;
-                        // }
-                }
-            }
-
-            // left extensions
-            if (mgeCandiLeft.size() > 1){
-                Matcher::result_t leftLongestExt = mgeCandiLeft.front();
-
-                for (unsigned int leftCandis = 0; leftCandis < mgeCandiLeft.size(); leftCandis++){
-                    leftLongestExt = (mgeCandiLeft[leftCandis].dbLen - mgeCandiLeft[leftCandis].alnLength >= leftLongestExt.dbLen - leftLongestExt.alnLength) ? mgeCandiLeft[leftCandis] : leftLongestExt;
-                }
-
-                // now retrieve the sequence of the longest extension in the correct orientation 
-                unsigned int leftLongestExtId = sequenceDbr->getId(leftLongestExt.dbKey);
-                unsigned int leftLongestExtLen = sequenceDbr->getSeqLen(leftLongestExtId);
-
-                char *leftLongestExtSequ = sequenceDbr->getData(leftLongestExtId, thread_idx);
-                std::string leftLongestExtSeq;
-
-                if ( leftLongestExt.isRevToAlignment ) {
-                    char *leftLongestExtSeqTmp = getNuclRevFragment(leftLongestExtSequ, leftLongestExtLen, (NucleotideMatrix *) subMat);
-                    leftLongestExtSeq = std::string(leftLongestExtSeqTmp, leftLongestExtLen);
-                    delete[] leftLongestExtSeqTmp;
-                }
-                else {
-                    leftLongestExtSeq = std::string(leftLongestExtSequ, leftLongestExtLen);
-                }
-
-                // Iterate through all candidates and compare to the longest
-                for (unsigned int leftRes = 0; leftRes < mgeCandiLeft.size(); leftRes++){
-                    // now retrieve the other candidate extensions and get their sequences
-
-                    Matcher::result_t lefty = mgeCandiLeft[leftRes];
-
-                    unsigned int leftExtCandiId = sequenceDbr->getId(lefty.dbKey);
-                    unsigned int leftExtCandiLen = sequenceDbr->getSeqLen(leftExtCandiId);
-
-                    if ( leftLongestExtId == leftExtCandiId ){
-                        continue;
-                    }
-
-                    char *leftExtCandiSequ = sequenceDbr->getData(leftExtCandiId, thread_idx);
-                    std::string leftExtCandiSeq;
-
-                    bool isBadCandi = false;
-                    if (lefty.isRevToAlignment) {
-                        // Convert the reversed fragment to std::string
-                        char *leftExtCandiSeqTmp = getNuclRevFragment(leftExtCandiSequ, leftExtCandiLen, (NucleotideMatrix *)subMat);
-                        leftExtCandiSeq = std::string(leftExtCandiSeqTmp, leftExtCandiLen);
-                        delete[] leftExtCandiSeqTmp;
-                        // Here we calculate the epected similarity of the extension
-                        isBadCandi = calcLikelihoodCorrection(leftLongestExt, lefty, leftLongestExtSeq, leftExtCandiSeq, subDeamDiNucRev, seqErrMatch, false);
-                    } else {
-                        // Directly convert the raw sequence to std::string
-                        leftExtCandiSeq = std::string(leftExtCandiSequ, leftExtCandiLen);
-                        // Here we calculate the epected similarity of the extension
-                        isBadCandi = calcLikelihoodCorrection(leftLongestExt, lefty, leftLongestExtSeq, leftExtCandiSeq, subDeamDiNuc, seqErrMatch, false);
-                    }
-
-                    if ( isBadCandi ){
-                        mgeFoundLeft = true;
-                        break;
-                    }
-                    // // calculate the sequence identity
-                    // unsigned int othersExtLen = ( lefty.dbLen - lefty.alnLength < numBaseCompare ) ? lefty.dbLen - lefty.alnLength : numBaseCompare;
-                    // int idCnt = 0;
-                    // int idRyCnt = 0;
-                    // for (unsigned int leftPos = 0; leftPos < othersExtLen; ++leftPos) {
-                    //     // std::cerr << "position\t" << leftPos << std::endl;
-                    //     // std::cerr << "leftLongestExt.dbStartPos\t" << leftLongestExt.dbStartPos << std::endl;
-                    //     // std::cerr << "leftLongestExt.dbEndPos\t" << leftLongestExt.dbEndPos << std::endl;
-                    //     // std::cerr << "lefty.dbStartPos\t" << lefty.dbStartPos << std::endl;
-                    //     // std::cerr << "lefty.dbEndPos\t" << lefty.dbEndPos << std::endl;
-                    //     // std::cerr << "leftLongestExtSeq\t" << leftLongestExtSeq << std::endl;
-                    //     // std::cerr << "leftExtCandiSeq\t" << leftExtCandiSeq << std::endl;
-                    //     idCnt += (leftLongestExtSeq[leftLongestExt.dbStartPos - 1 - leftPos] == leftExtCandiSeq[lefty.dbStartPos - 1 - leftPos]) ? 1 : 0;
-                    //     idRyCnt += (ryMap[leftLongestExtSeq[leftLongestExt.dbStartPos - 1 - leftPos]] == ryMap[leftExtCandiSeq[lefty.dbStartPos - 1 - leftPos]]) ? 1 : 0;
-                    // }
-
-                    // float seqId = static_cast<float>(idCnt) / othersExtLen;
-                    // float rySeqId = static_cast<float>(idRyCnt) / othersExtLen;
-
-                    // if ( seqId < mgeSeqId || rySeqId < mgeRySeqId ){
-                    // //if ( seqId < mgeSeqId ){
-                    //     // We believe that we found an MGE so do not allow to extend to LEFT at all!!
-                    //     // std::cerr << "mge LEFT found:\t" << std::endl;
-                    //     // std::cerr << "main query\t" << querySeq;
-                    //     // std::cerr << "leftLongestExtSeq\t" << leftLongestExtSeq << std::endl;
-                    //     // std::cerr << "leftExtCandiSeq\t" << leftExtCandiSeq << std::endl;
-                    //     // std::cerr << "seqId:\t" << seqId << std::endl;
-                    //     // std::cerr << "rySeqId:\t" << rySeqId << std::endl;
-                    //     // std::cerr << "Compare len:\t" << othersExtLen << std::endl;
-                    //     // std::cerr << "leftLongestExt.dbStartPos\t" << leftLongestExt.dbStartPos << std::endl;
-                    //     // std::cerr << std::endl; 
-                    //     mgeFoundLeft = true;
-                    //     break;
-                    // }
-                }
-            }
-
-            mgeCandiRight.clear();
-            mgeCandiLeft.clear();
-// MGE marker end
-
             // if ( queryKey == 4631784 ){
             //     std::cerr << "mge found left?:\t" << mgeFoundLeft << std::endl;
             //     std::cerr << "mge found right?:\t" << mgeFoundRight << std::endl;
             // }
 
-
             // choose only reads
             std::vector<Matcher::result_t> reads;
-
-            //DEBUG CORRECTION
-            if ( queryKey == 4631784 ){
-                std::cerr << ">" << "QUERY_4631784" << std::endl;
-                std::cerr << querySeq << std::endl;
-            }
-            // DEBUG CORRECTION END
+            reads.reserve(300);
 
             for (size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
 
@@ -505,11 +246,11 @@ int doCorrection(LocalParameters &par) {
                 char *tSeq = sequenceDbr->getData(tId, thread_idx);
                 bool deleteTargetSeq = false;
 
-                // bool isContig = sequenceDbr->getExtData(tId);
+                bool isContig = sequenceDbr->getExtData(tId);
 
-                // if ( isContig ){
-                //     continue;
-                // }
+                if ( isContig ){
+                    continue;
+                }
 
                 if (targetRead.isRevToAlignment){
                     tSeq = getNuclRevFragment(tSeq, targetRead.dbLen, (NucleotideMatrix *) subMat);
@@ -530,7 +271,7 @@ int doCorrection(LocalParameters &par) {
                 }
 
 
-#ifdef DEBUGCORR
+#ifdef DEBUGCORR2
                 if ( queryKey == 4631784 ){
                 // DEBUG CORRECTION
                     #pragma omp critical
@@ -583,20 +324,24 @@ int doCorrection(LocalParameters &par) {
                     delete[] tSeq;
                 }
 
-                if ( targetRead.rySeqId >= rymerThresh && !mgeFoundRight && targetRead.dbStartPos == 0 && static_cast<unsigned int>(targetRead.qEndPos) == (querySeqLen - 1)) {
+                //std::pair<bool, bool> mgefound = mgeFinder(alignments, sequenceDbr, querySeq, querySeqLen, queryKey, thread_idx, par, (NucleotideMatrix *) subMat, subDeamDiNuc, subDeamDiNucRev, seqErrMatch);
+                std::pair<bool,bool> mgefound(false, false);
+
+
+                if ( targetRead.rySeqId >= rymerThresh && !mgefound.second && targetRead.dbStartPos == 0 && static_cast<unsigned int>(targetRead.qEndPos) == (querySeqLen - 1)) {
                     // right extension
                     reads.push_back(alignments[alnIdx]);
                 }
-                else if ( targetRead.rySeqId >= rymerThresh && !mgeFoundLeft && alignments[alnIdx].qStartPos == 0 && static_cast<unsigned int>(alignments[alnIdx].dbEndPos) == (alignments[alnIdx].dbLen - 1)) {
+                else if ( targetRead.rySeqId >= rymerThresh && !mgefound.first && targetRead.qStartPos == 0 && static_cast<unsigned int>(targetRead.dbEndPos) == (targetRead.dbLen - 1)) {
                     // left extension
                     reads.push_back(alignments[alnIdx]);
                 }
-                else if (targetRead.rySeqId >= rymerThresh ){
+                else if (targetRead.rySeqId >= rymerThresh && avCov < 100 ){
                     // this is for the targets that align within the query and do not potentially extend anything, therefore the MGE finder does not make sense here
                     reads.push_back(alignments[alnIdx]);
                 } 
             }
-            alignments.clear();
+            //alignments.clear();
 
 
             // Iterating through all alignments per query
@@ -634,6 +379,7 @@ int doCorrection(LocalParameters &par) {
 
                 //if ( targetWasExt == false && isNotIdentity && target.rySeqId >= rymerThresh && target.seqId >= par.seqIdThr && target.alnLength >= 30 && ){
                 //if ( targetWasExt == false && target.rySeqId >= rymerThresh && target.seqId >= par.seqIdThr && target.alnLength >= 30 ) {
+                //auto startVec = std::chrono::high_resolution_clock::now();
                 if ( target.rySeqId >= rymerThresh && target.seqId >= par.seqIdThr && target.alnLength >= 30 ) {
 
                     std::vector<int> subdeam_index(target.dbLen);
@@ -662,6 +408,9 @@ int doCorrection(LocalParameters &par) {
                         revCount[posInQuery].count[targetBase][deamT] += target.isRevToAlignment;
                     }
                 }
+                //auto endVec = std::chrono::high_resolution_clock::now();
+                //std::chrono::duration<double, std::milli> elapsed = endVec - startVec;
+                //std::cerr << "Elapsed time Vector: " << elapsed.count() << " ms" << std::endl;
 
                 if ( deleteTargetSeq )
                     {
@@ -692,7 +441,7 @@ int doCorrection(LocalParameters &par) {
                     }
                 }
                
-                if ( totalCov[qPos] <= 1){
+                if ( totalCov[qPos] <= 1 ){
                     corrQuery[qPos] = querySeq[qPos];
                 }
                 // if the sequence is a contig and has not been extended or corrected then just go by coverage:
@@ -730,9 +479,14 @@ int doCorrection(LocalParameters &par) {
                 //     }
                 // }
                 else {
+                    //auto startLikeli = std::chrono::high_resolution_clock::now();
                     int newBase = qBase;
                     int newBaseCandidate = mostLikeliBaseRead(qBase, qPos, deamVec, revCount, subDeamDiNuc, subDeamDiNucRev, seqErrMatch);
                     newBase = newBaseCandidate;
+                //auto endLikeli = std::chrono::high_resolution_clock::now();
+                // std::chrono::duration<double, std::milli> elapsed = endLikeli - startLikeli;
+                // std::cerr << "Elapsed time Likeli: " << elapsed.count() << " ms" << std::endl;
+                // sumLikeli+=elapsed.count();
 
                     corrQuery[qPos] = "ACGT"[newBase];
                 }
@@ -768,6 +522,7 @@ int doCorrection(LocalParameters &par) {
 
             //if ( queryKey == 1250638 ){
             if ( queryKey == 4631784 ){
+            //if ( false ){
             //unsigned int max_cov = *std::max_element(totalCov.begin(), totalCov.end());
             //if ( max_cov >= 4 ){
             //if ( queryKey == 598571 ){
@@ -811,7 +566,11 @@ int doCorrection(LocalParameters &par) {
             totalCov.clear();
             queryCov.clear();
             deamVec.clear();
-            
+
+            // auto endQuery = std::chrono::high_resolution_clock::now();
+            // std::chrono::duration<double, std::milli> elapsed = endQuery - startQuery;
+            // std::cerr << "Elapsed time Query: " << elapsed.count() << " ms" << std::endl;   
+            // std::cerr << "Elapsed sum time query likeli: " << sumLikeli << " ms" << std::endl;  
         }
     } // end parallel
 
