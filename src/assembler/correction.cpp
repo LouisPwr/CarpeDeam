@@ -4,27 +4,88 @@ const double SMOOTHING_VALUE = 0.001;
 #define DEBUGCORR
 //#define DEBUCORR2
 
-int mostLikeliBaseRead(const int baseInQuery, const int qIter, const std::vector<countDeamCov> & deamVec, const std::vector<countDeamCov> & countRevs, const std::vector<diNucleotideProb> & subDeamDiNuc, const std::vector<diNucleotideProb> & subDeamDiNucRev, const diNucleotideProb & seqErrMatch)
+int mostLikeliBaseRead(const int baseInQuery, const int qIter, const std::vector<countDeamCov> & deamVec, const std::vector<countDeamCov> & countRevs, const std::vector<diNucleotideProb> & subDeamDiNuc, const std::vector<diNucleotideProb> & subDeamDiNucRev, const diNucleotideProb & seqErrMatch, bool wasCorr, unsigned int querySeqLen)
 {
     // Initial likelihod of qBase (either A,C,G or T)
     //std::vector<float> baseFreqs = { 0.23554, 0.26446, 0.26446, 0.23554 };
     std::vector<float> baseFreqs = { 0.25, 0.25, 0.25, 0.25 };
-    std::vector<double> baseLikelis(4, 0.0); 
+    std::vector<long double> baseLikelis(4, 0.0); 
 
     // Precompute invariant logs
     std::vector<double> logBaseFreqs(4);
     std::vector<double> logQBaseErr(4);
-    for (int q = 0; q < 4; q++) {
+    std::vector<double> logTBaseErr(4);
+
+    unsigned int covA = 0;
+    unsigned int covC = 0;
+    unsigned int covG = 0;
+    unsigned int covT = 0;
+    for (size_t a = 0; a < subDeamDiNuc.size(); a++) {
+        covA += deamVec[qIter].count[0][a];
+    }
+    for (size_t c = 0; c < subDeamDiNuc.size(); c++) {
+        covC += deamVec[qIter].count[1][c];
+    }
+    for (size_t g = 0; g < subDeamDiNuc.size(); g++) {
+        covG += deamVec[qIter].count[2][g];
+    }
+    for (size_t t = 0; t < subDeamDiNuc.size(); t++) {
+        covT += deamVec[qIter].count[3][t];
+    }
+    std::vector<unsigned int> baseCovs = {covA, covC, covG, covT}; 
+
+
+    double ctRatio = static_cast<double>(baseCovs[3]) /  (baseCovs[1] + baseCovs[3] + baseCovs[0] + baseCovs[2]); // Ensure floating-point division
+    double gaRatio = static_cast<double>(baseCovs[0]) /  (baseCovs[1] + baseCovs[3] + baseCovs[0] + baseCovs[2]); // Ensure floating-point division
+
+// maybe use
+// double ctSum = baseCovs[1] + baseCovs[3];
+// double gaSum = baseCovs[0] + baseCovs[2];
+
+// double ctRatio = (ctSum != 0) ? static_cast<double>(baseCovs[3]) / ctSum  : 0.0;
+// double gaRatio = (gaSum != 0) ? static_cast<double>(baseCovs[0]) / gaSum : 0.0;
+ 
+    for (unsigned int q = 0; q < 4; q++) {
         logBaseFreqs[q] = std::log(baseFreqs[q]);  // Assuming baseFreqs are all 0.25
         //logQBaseErr[q] = std::log(seqErrMatch.p[q][baseInQuery]);
-        logQBaseErr[q] = std::log(seqErrMatch.p[q][baseInQuery]);
+        logTBaseErr[q] = std::log(seqErrMatch.p[q][baseInQuery]);
+        if ( wasCorr == true){             
+            logQBaseErr[q] = std::log(seqErrMatch.p[q][baseInQuery]);
+        }        
+        else{
+            if (ctRatio >= 0.4 || gaRatio >= 0.4 ) {
+                //auto maxElementIt = std::max_element(baseCovs.begin(), baseCovs.end());
+                //int maxIndex = std::distance(baseCovs.begin(), maxElementIt);
+                return baseInQuery;
+            } 
+            if ( qIter < 5 ){
+                double deamination = subDeamDiNuc[qIter].p[q][baseInQuery];
+                double QBaseErr = std::max(deamination, SMOOTHING_VALUE);
+                logQBaseErr[q] = std::log(QBaseErr);
+            }
+            else if ( qIter >= querySeqLen - 5 ){    
+                double deamination = subDeamDiNuc[subDeamDiNuc.size() - (querySeqLen - qIter)].p[q][baseInQuery];
+                double QBaseErr = std::max(deamination, SMOOTHING_VALUE);
+                logQBaseErr[q] = std::log(QBaseErr);
+            }
+            else{
+                double deamination = subDeamDiNuc[5].p[q][baseInQuery];
+                double QBaseErr = std::max(deamination, SMOOTHING_VALUE);
+                logQBaseErr[q] = std::log(QBaseErr);
+            }
+        }
     }
 
+    // calculating the most likeli base
     for ( int qBase=0; qBase<4; qBase++ )
     {
-        double qBaseLik = 0;
+        long double qBaseLik = 0;
         for (int tBase=0; tBase < 4; tBase++)
         {
+            if ( baseCovs[tBase] == 0 ){
+                //baseLikelis[tBase] = -std::numeric_limits<long double>::infinity(); // log(0)
+                continue;
+            }
             // The vector deamVec contains the counts of deaminations per position;
             // Iterating through it to make the amount of multiplications we need to do. 
             for ( unsigned int l = 0; l < subDeamDiNuc.size(); l++)
@@ -37,15 +98,21 @@ int mostLikeliBaseRead(const int baseInQuery, const int qIter, const std::vector
                 deamPatternRev = std::max(deamPatternRev, SMOOTHING_VALUE);
                 //(deamPatternRev == 0.0) ? SMOOTHING_VALUE : deamPatternRev;
 
+                // int covDeam = deamVec[qIter].count[tBase][l];
+                // int numReverse = countRevs[qIter].count[tBase][l];
                 int covDeam = deamVec[qIter].count[tBase][l];
                 int numReverse = countRevs[qIter].count[tBase][l];
+
                 double logDeamPattern = std::log(deamPattern);
                 double logDeamPatternRev = std::log(deamPatternRev);
 
                 // qBaseLik += (covDeam - numReverse) * (logQBaseErr[qBase] + logDeamPattern);
                 // qBaseLik += numReverse * (logQBaseErr[qBase] + logDeamPatternRev);
-                qBaseLik += (covDeam - numReverse) * (logQBaseErr[tBase] + logDeamPattern);
-                qBaseLik += numReverse * (logQBaseErr[tBase] + logDeamPatternRev);
+                if (covDeam != 0) {
+                    qBaseLik += (covDeam - numReverse) * (logTBaseErr[tBase] + logQBaseErr[qBase] + logDeamPattern);
+                    qBaseLik += numReverse * (logTBaseErr[tBase] +  logQBaseErr[qBase] + logDeamPatternRev);
+                }
+                //qBaseLik += (covDeam - numReverse) * (logTBaseErr[tBase] + logQBaseErr[qBase] + logDeamPattern); 
             }
         }
         baseLikelis[qBase] = qBaseLik;
@@ -336,7 +403,7 @@ int doCorrection(LocalParameters &par) {
                     // left extension
                     reads.push_back(alignments[alnIdx]);
                 }
-                else if (targetRead.rySeqId >= rymerThresh && avCov < 100 ){
+                else if (targetRead.rySeqId >= rymerThresh && avCov < 50 ){
                     // this is for the targets that align within the query and do not potentially extend anything, therefore the MGE finder does not make sense here
                     reads.push_back(alignments[alnIdx]);
                 } 
@@ -425,23 +492,24 @@ int doCorrection(LocalParameters &par) {
             {
                 int qBase = nucleotideMap[querySeq[qPos]];
                 // Getting coverage of each base A,C,G,T at position "pos" in alignment (=overlap)
-                if ( qWasExtended == false ){
-                    queryCov[qPos][qBase] += 1;
-                    totalCov[qPos] += 1;
 
-                    if ( qPos < 5 ){
-                        deamVec[qPos].count[qBase][qPos] += 1;
-                    }
-                    else if ( qPos >= querySeqLen - 5 ){
-                        int queryIdx = querySeqLen - 1 - qPos;
-                        deamVec[qPos].count[qBase][ 10 - queryIdx] += 1;
-                    }
-                    else{
-                        deamVec[qPos].count[qBase][5] += 1;
-                    }
-                }
+                // if ( qWasExtended == false ){
+                //     queryCov[qPos][qBase] += 1;
+                //     totalCov[qPos] += 1;
+
+                //     if ( qPos < 5 ){
+                //         deamVec[qPos].count[qBase][qPos] += 1;
+                //     }
+                //     else if ( qPos >= querySeqLen - 5 ){
+                //         int queryIdx = querySeqLen - 1 - qPos;
+                //         deamVec[qPos].count[qBase][ 10 - queryIdx] += 1;
+                //     }
+                //     else{
+                //         deamVec[qPos].count[qBase][5] += 1;
+                //     }
+                // }
                
-                if ( totalCov[qPos] <= 1 ){
+                if ( totalCov[qPos] < 1 ){
                     corrQuery[qPos] = querySeq[qPos];
                 }
                 // if the sequence is a contig and has not been extended or corrected then just go by coverage:
@@ -481,7 +549,7 @@ int doCorrection(LocalParameters &par) {
                 else {
                     //auto startLikeli = std::chrono::high_resolution_clock::now();
                     int newBase = qBase;
-                    int newBaseCandidate = mostLikeliBaseRead(qBase, qPos, deamVec, revCount, subDeamDiNuc, subDeamDiNucRev, seqErrMatch);
+                    int newBaseCandidate = mostLikeliBaseRead(qBase, qPos, deamVec, revCount, subDeamDiNuc, subDeamDiNucRev, seqErrMatch, qWasExtended, querySeqLen);
                     newBase = newBaseCandidate;
                 //auto endLikeli = std::chrono::high_resolution_clock::now();
                 // std::chrono::duration<double, std::milli> elapsed = endLikeli - startLikeli;

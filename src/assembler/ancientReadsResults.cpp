@@ -256,10 +256,42 @@ int doNuclAssembly1(LocalParameters &par) {
                                             
             }
 
+
+            // Iterate over all alignments and update the alignments (only the overlapping ones) to get more accurate seqids since previous step was correction
+            for(size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
+
+                if ( (alignments[alnIdx].dbStartPos == 0 && static_cast<unsigned int>(alignments[alnIdx].qEndPos) == (querySeqLen - 1)) || (alignments[alnIdx].qStartPos == 0 && static_cast<unsigned int>(alignments[alnIdx].dbEndPos) == (alignments[alnIdx].dbLen - 1)) ) {
+
+                    unsigned int tId = sequenceDbr->getId(alignments[alnIdx].dbKey);
+                    unsigned int tSeqLen = sequenceDbr->getSeqLen(tId);
+                    char *tSeq = sequenceDbr->getData(tId, thread_idx);
+                    bool deleteTargetSeq = false;
+                    if (useReverse[tId]){
+                        tSeq = getNuclRevFragment(tSeq, tSeqLen, (NucleotideMatrix *) subMat);
+                        deleteTargetSeq = true;
+                    }
+                        
+                    int qStartPos = alignments[alnIdx].qStartPos;
+                    int dbStartPos = alignments[alnIdx].dbStartPos;
+                    int diag = (qStartPos) - dbStartPos;
+
+                    DistanceCalculator::LocalAlignment alignment = DistanceCalculator::ungappedAlignmentByDiagonal(
+                                                                    querySeq, querySeqLen, tSeq, tSeqLen,
+                                                                    diag, fastMatrix.matrix, par.rescoreMode);
+
+                    updateNuclAlignment(alignments[alnIdx], alignment, querySeq, querySeqLen, tSeq, tSeqLen);
+
+                    if (deleteTargetSeq) {
+                        delete[] tSeq;
+                    }
+                }
+            }
+
+
             for (size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
                 unsigned int targetId = sequenceDbr->getId(alignments[alnIdx].dbKey);
                 bool isContig = sequenceDbr->getExtData(targetId);
-                if ( isContig == false && alignments[alnIdx].alnLength >= 30 ){
+                if ( isContig == false && alignments[alnIdx].alnLength >= 30 && alignments[alnIdx].seqId >= par.seqIdThr ){
                     notContig.push_back(alignments[alnIdx]);
                 }
             }
