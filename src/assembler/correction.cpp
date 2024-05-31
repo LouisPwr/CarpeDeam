@@ -108,6 +108,10 @@ int mostLikeliBaseRead(const int baseInQuery, const int qIter, const std::vector
 
                 // qBaseLik += (covDeam - numReverse) * (logQBaseErr[qBase] + logDeamPattern);
                 // qBaseLik += numReverse * (logQBaseErr[qBase] + logDeamPatternRev);
+                // if (covDeam != 0) {
+                //     qBaseLik += (covDeam - numReverse) * (logTBaseErr[tBase] + logQBaseErr[qBase] + logDeamPattern);
+                //     qBaseLik += numReverse * (logTBaseErr[tBase] +  logQBaseErr[qBase] + logDeamPatternRev);
+                // }
                 if (covDeam != 0) {
                     qBaseLik += (covDeam - numReverse) * (logTBaseErr[tBase] + logQBaseErr[qBase] + logDeamPattern);
                     qBaseLik += numReverse * (logTBaseErr[tBase] +  logQBaseErr[qBase] + logDeamPatternRev);
@@ -494,22 +498,22 @@ int doCorrection(LocalParameters &par) {
                 // Getting coverage of each base A,C,G,T at position "pos" in alignment (=overlap)
 
                 // if ( qWasExtended == false ){
-                //     queryCov[qPos][qBase] += 1;
-                //     totalCov[qPos] += 1;
+                    // queryCov[qPos][qBase] += 1;
+                    // totalCov[qPos] += 1;
 
-                //     if ( qPos < 5 ){
-                //         deamVec[qPos].count[qBase][qPos] += 1;
-                //     }
-                //     else if ( qPos >= querySeqLen - 5 ){
-                //         int queryIdx = querySeqLen - 1 - qPos;
-                //         deamVec[qPos].count[qBase][ 10 - queryIdx] += 1;
-                //     }
-                //     else{
-                //         deamVec[qPos].count[qBase][5] += 1;
-                //     }
+                    // if ( qPos < 5 ){
+                    //     deamVec[qPos].count[qBase][qPos] += 1;
+                    // }
+                    // else if ( qPos >= querySeqLen - 5 ){
+                    //     int queryIdx = querySeqLen - 1 - qPos;
+                    //     deamVec[qPos].count[qBase][ 10 - queryIdx] += 1;
+                    // }
+                    // else{
+                    //     deamVec[qPos].count[qBase][5] += 1;
+                    // }
                 // }
                
-                if ( totalCov[qPos] < 1 ){
+                if ( totalCov[qPos] <= 1 ){
                     corrQuery[qPos] = querySeq[qPos];
                 }
                 // if the sequence is a contig and has not been extended or corrected then just go by coverage:
