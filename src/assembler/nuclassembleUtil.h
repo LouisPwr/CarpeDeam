@@ -128,6 +128,8 @@ void calcLikelihood(scorePerRes & scoredRes, char* querySeq, const char* targetS
 
 std::pair<bool, bool> mgeFinder(std::vector<Matcher::result_t> & alignments, DBReader<unsigned int>* sequenceDbr, char *querySeq, const unsigned int querySeqLen, unsigned int queryKey, unsigned int thread_idx, LocalParameters &par, NucleotideMatrix *subMat, const std::vector<diNucleotideProb> & subDeamDiNuc, const std::vector<diNucleotideProb> & subDeamDiNucRev, const diNucleotideProb & seqErrMatch);
 
+std::pair<bool, bool> mgeFinderContigs(std::vector<Matcher::result_t> & alignments, DBReader<unsigned int>* sequenceDbr, char *querySeq, const unsigned int querySeqLen, unsigned int queryKey, unsigned int thread_idx, LocalParameters &par, NucleotideMatrix *subMat, const std::vector<diNucleotideProb> & subDeamDiNuc, const std::vector<diNucleotideProb> & subDeamDiNucRev, const diNucleotideProb & seqErrMatch);
+
 //bool calcLikelihoodCorrection(Matcher::result_t rightLongestCandi, Matcher::result_t candidate, std::string querySeq, std::string targetSeq, std::vector<diNucleotideProb> & subDeamDiNuc, diNucleotideProb & seqErrMatch, bool extSide);
 std::vector<long double> calcLikelihoodCorrection(const Matcher::result_t & rightLongestCandi, const Matcher::result_t & candidate, const std::string & querySeq, const std::string & targetSeq, const std::vector<diNucleotideProb> & subDeamDiNuc, const diNucleotideProb & seqErrMatch, bool extSide);
 
