@@ -257,52 +257,42 @@ int doNuclAssembly1(LocalParameters &par) {
             }
 
 
-            // Iterate over all alignments and update the alignments (only the overlapping ones) to get more accurate seqids since previous step was correction
-            for(size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
+            // // Iterate over all alignments and update the alignments (only the overlapping ones) to get more accurate seqids since previous step was correction
+            // for(size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
 
-                if ( (alignments[alnIdx].dbStartPos == 0 && static_cast<unsigned int>(alignments[alnIdx].qEndPos) == (querySeqLen - 1)) || (alignments[alnIdx].qStartPos == 0 && static_cast<unsigned int>(alignments[alnIdx].dbEndPos) == (alignments[alnIdx].dbLen - 1)) ) {
+            //     if ( (alignments[alnIdx].dbStartPos == 0 && static_cast<unsigned int>(alignments[alnIdx].qEndPos) == (querySeqLen - 1)) || (alignments[alnIdx].qStartPos == 0 && static_cast<unsigned int>(alignments[alnIdx].dbEndPos) == (alignments[alnIdx].dbLen - 1)) ) {
 
-                    unsigned int tId = sequenceDbr->getId(alignments[alnIdx].dbKey);
-                    unsigned int tSeqLen = sequenceDbr->getSeqLen(tId);
-                    char *tSeq = sequenceDbr->getData(tId, thread_idx);
-                    bool deleteTargetSeq = false;
-                    if (useReverse[tId]){
-                        tSeq = getNuclRevFragment(tSeq, tSeqLen, (NucleotideMatrix *) subMat);
-                        deleteTargetSeq = true;
-                    }
+            //         unsigned int tId = sequenceDbr->getId(alignments[alnIdx].dbKey);
+            //         unsigned int tSeqLen = sequenceDbr->getSeqLen(tId);
+            //         char *tSeq = sequenceDbr->getData(tId, thread_idx);
+            //         bool deleteTargetSeq = false;
+            //         if (useReverse[tId]){
+            //             tSeq = getNuclRevFragment(tSeq, tSeqLen, (NucleotideMatrix *) subMat);
+            //             deleteTargetSeq = true;
+            //         }
                         
-                    int qStartPos = alignments[alnIdx].qStartPos;
-                    int dbStartPos = alignments[alnIdx].dbStartPos;
-                    int diag = (qStartPos) - dbStartPos;
+            //         int qStartPos = alignments[alnIdx].qStartPos;
+            //         int dbStartPos = alignments[alnIdx].dbStartPos;
+            //         int diag = (qStartPos) - dbStartPos;
 
-                    DistanceCalculator::LocalAlignment alignment = DistanceCalculator::ungappedAlignmentByDiagonal(
-                                                                    querySeq, querySeqLen, tSeq, tSeqLen,
-                                                                    diag, fastMatrix.matrix, par.rescoreMode);
+            //         DistanceCalculator::LocalAlignment alignment = DistanceCalculator::ungappedAlignmentByDiagonal(
+            //                                                         querySeq, querySeqLen, tSeq, tSeqLen,
+            //                                                         diag, fastMatrix.matrix, par.rescoreMode);
 
-                    updateNuclAlignment(alignments[alnIdx], alignment, querySeq, querySeqLen, tSeq, tSeqLen);
+            //         updateNuclAlignment(alignments[alnIdx], alignment, querySeq, querySeqLen, tSeq, tSeqLen);
 
-                    if (deleteTargetSeq) {
-                        delete[] tSeq;
-                    }
-                }
-            }
-
-
-            for (size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
-                unsigned int targetId = sequenceDbr->getId(alignments[alnIdx].dbKey);
-                bool isContig = sequenceDbr->getExtData(targetId);
-                if ( isContig == false && alignments[alnIdx].alnLength >= 30 && alignments[alnIdx].seqId >= par.seqIdThr ){
-                    notContig.push_back(alignments[alnIdx]);
-                }
-            }
-            alignments.clear();
+            //         if (deleteTargetSeq) {
+            //             delete[] tSeq;
+            //         }
+            //     }
+            // }
 
             // update sequence identity
             // Iterate through all candidates and compare to the longest
-            for (unsigned int idx = 0; idx < notContig.size(); idx++){
+            for (unsigned int idx = 0; idx < alignments.size(); idx++){
                 // now retrieve the other candidate extensions and get their sequences
 
-                Matcher::result_t aln2update = notContig[idx];
+                Matcher::result_t aln2update = alignments[idx];
 
                 unsigned int aln2updateId = sequenceDbr->getId(aln2update.dbKey);
                 unsigned int aln2updateLen = sequenceDbr->getSeqLen(aln2updateId);
@@ -337,6 +327,15 @@ int doNuclAssembly1(LocalParameters &par) {
                 aln2update.seqId = seqId;
                 aln2update.rySeqId = rySeqId;
             }
+
+            for (size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
+                unsigned int targetId = sequenceDbr->getId(alignments[alnIdx].dbKey);
+                bool isContig = sequenceDbr->getExtData(targetId);
+                if ( isContig == false && alignments[alnIdx].alnLength >= 30 && alignments[alnIdx].seqId >= par.seqIdThr ){
+                    notContig.push_back(alignments[alnIdx]);
+                }
+            }
+            alignments.clear();
 
             // Plan for dividing the extension:
             // 1. If target == read -> do damage aware extension
@@ -373,7 +372,7 @@ int doNuclAssembly1(LocalParameters &par) {
                 const bool rightStart = notContig[alnIdx].dbStartPos == 0;
                 const bool leftStart = notContig[alnIdx].qStartPos == 0;
                 const bool isNotIdentity = (notContig[alnIdx].dbKey != queryKey);
-                const bool notRightStartAndLeftStart = !(notContig[alnIdx].dbStartPos == 0 && notContig[alnIdx].qStartPos == 0 );
+                //const bool notRightStartAndLeftStart = !(notContig[alnIdx].dbStartPos == 0 && notContig[alnIdx].qStartPos == 0 );
 
 
 #ifdef DEBUGEXT

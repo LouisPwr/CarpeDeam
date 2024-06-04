@@ -31,6 +31,8 @@ class LocalParameters : public Parameters {
     std::vector<MMseqsParameter *> filternoncoding;
     std::vector<MMseqsParameter *> guidedassembleresults;
     std::vector<MMseqsParameter *> reduceredundancy;
+    std::vector<MMseqsParameter *> ancientKmermatcherContigs;
+    std::vector<MMseqsParameter *> ancientKmermatcherReads;
 
     int filterProteins;
     int deleteFilesInc;
@@ -38,8 +40,6 @@ class LocalParameters : public Parameters {
     int usePrefilter;
     int prefilterNumIterations;
     float clustSeqIdThr;
-    float clustRySeqIdThr;
-    // int clustRySize;
     float clustCovThr;
 
     float proteinFilterThreshold;
@@ -55,14 +55,24 @@ class LocalParameters : public Parameters {
     int prefilterKmerSize;
     size_t prefilterMaxResListLen;                // Maximal result list length per query
 
+    // ancient parameters
     float randomAlignPenal;
     float excessPenal;
-    float correctionThreshold;
+    float correctionThresholdRySeqId;
     float correctionThresholdSeqId;
     float likelihoodThreshold;
     float mergeSeqIdThr;
+    float corrContigSeqId;
     std::string ancientDamagePath;
     int numIterationsReads;
+    bool ancientIncludeOnlyExtendReads;
+    int ancientKmerSizeReads;
+    bool ancientIncludeOnlyExtendContigs;
+    int ancientKmerSizeContigs;
+    float ancientKmersPerSequenceScale;
+    int ancientkmersPerSequence;
+    float rySeqIdThr;
+    
 
     MultiParam<char*> prefilterScoringMatrixFile;       // path to scoring matrix
     MultiParam<int> multiNumIterations;
@@ -77,7 +87,7 @@ class LocalParameters : public Parameters {
     PARAMETER(PARAM_DELETE_TMP_INC)
     PARAMETER(PARAM_MIN_CONTIG_LEN)
     PARAMETER(PARAM_CLUST_MIN_SEQ_ID_THR)
-    PARAMETER(PARAM_CLUST_MIN_RYSEQ_ID_THR)
+    //PARAMETER(PARAM_CLUST_MIN_RYSEQ_ID_THR)
     // PARAMETER(PARAM_CLUST_RYMER_LEN)
     PARAMETER(PARAM_CLUST_C)
     PARAMETER(PARAM_CYCLE_CHECK)
@@ -108,6 +118,14 @@ class LocalParameters : public Parameters {
     PARAMETER(PARAM_DAMAGE_PATH)
     PARAMETER(PARAM_NUM_ITERATIONS_READS)
     PARAMETER(PARAM_MIN_SEQ_MERGE_ID)
+    PARAMETER(PARAM_CORR_CONTIG_MIN_SEQ_ID)
+    PARAMETER(PARAM_ANCIENT_INCLUDE_ONLY_EXTENDABLE_READS)
+    PARAMETER(PARAM_ANCIENT_PARAM_K_READS)
+    PARAMETER(PARAM_ANCIENT_INCLUDE_ONLY_EXTENDABLE_CONTIGS)
+    PARAMETER(PARAM_ANCIENT_PARAM_K_CONTIGS)
+    PARAMETER(PARAM_ANCIENT_KMER_PER_SEQ_SCALE)
+    PARAMETER(PARAM_ANCIENT_KMER_PER_SEQ)
+    PARAMETER(PARAM_ANCIENT_MIN_RYSEQ_ID)
 
    private:
     LocalParameters() : Parameters(),
@@ -123,7 +141,7 @@ class LocalParameters : public Parameters {
                         PARAM_DELETE_TMP_INC(PARAM_DELETE_TMP_INC_ID, "--delete-tmp-inc", "Delete temporary files incremental", "Delete temporary files incremental [0,1]", typeid(int), (void *)&deleteFilesInc, "^[0-1]{1}$", MMseqsParameter::COMMAND_COMMON | MMseqsParameter::COMMAND_EXPERT),
                         PARAM_MIN_CONTIG_LEN(PARAM_MIN_CONTIG_LEN_ID, "--min-contig-len", "Minimum contig length", "Minimum length of assembled contig to output", typeid(int), (void *)&minContigLen, "^[1-9]{1}[0-9]*$"),
                         PARAM_CLUST_MIN_SEQ_ID_THR(PARAM_CLUST_MIN_SEQ_ID_THR_ID, "--clust-min-seq-id", "Clustering seq. id. threshold", "Seq. id. threshold passed to linclust algorithm to reduce redundancy in assembly (range 0.0-1.0)", typeid(float), (void *)&clustSeqIdThr, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_CLUST),
-                        PARAM_CLUST_MIN_RYSEQ_ID_THR(PARAM_CLUST_MIN_RYSEQ_ID_THR_ID, "--clust-min-ry-seq-id", "Clustering seq. id. threshold in RY-space", "RY-Seq. id. threshold passed to linclust algorithm to reduce redundancy in assembly (range 0.0-1.0)", typeid(float), (void *)&clustRySeqIdThr, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_CLUST),      
+                        // PARAM_CLUST_MIN_RYSEQ_ID_THR(PARAM_CLUST_MIN_RYSEQ_ID_THR_ID, "--clust-min-ry-seq-id", "Clustering seq. id. threshold in RY-space", "RY-Seq. id. threshold passed to linclust algorithm to reduce redundancy in assembly (range 0.0-1.0)", typeid(float), (void *)&clustRySeqIdThr, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_CLUST),      
                         // PARAM_CLUST_RYMER_LEN(PARAM_CLUST_RYMER_LEN_ID, "--clust-rymer-len", "Lenght of RY-mers used for clustering", "RY-mer length for redundancy reduction", typeid(int), (void *)&clustRySize, "", MMseqsParameter::COMMAND_CLUST),
                         PARAM_CLUST_C(PARAM_CLUST_C_ID, "--clust-min-cov", "Clustering coverage threshold", "Coverage threshold passed to linclust algorithm to reduce redundancy in assembly (range 0.0-1.0)", typeid(float), (void *)&clustCovThr, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_CLUST),
                         PARAM_CYCLE_CHECK(PARAM_CYCLE_CHECK_ID, "--cycle-check", "Check for circular sequences", "Check for circular sequences (avoid over extension of circular or long repeated regions) ", typeid(bool), (void *)&cycleCheck, "", MMseqsParameter::COMMAND_MISC),
@@ -147,18 +165,26 @@ class LocalParameters : public Parameters {
                         PARAM_MULTI_SPACED_KMER_MODE(PARAM_MULTI_SPACED_KMER_MODE_ID, "--spaced-kmer-mode", "Spaced k-mers", "0: use consecutive positions in k-mers; 1: use spaced k-mers", typeid(MultiParam<int>), (void *)&multiSpacedKmer, "^[0-1]{1}", MMseqsParameter::COMMAND_EXPERT),
                         PARAM_MULTI_SPACED_KMER_PATTERN(PARAM_MULTI_SPACED_KMER_PATTERN_ID, "--spaced-kmer-pattern", "User-specified spaced k-mer pattern", "User-specified spaced k-mer pattern", typeid(MultiParam<char *>), (void *)&multiSpacedKmerPattern, "", MMseqsParameter::COMMAND_EXPERT),
 
-                        PARAM_RAND_ALIGN(PARAM_RAND_ALIGN_ID, "--ext-random-align", "random alignment", "Use either: 0.8 or 0.9", typeid(float), (void *) &randomAlignPenal, "", MMseqsParameter::COMMAND_EXPERT),
-                        PARAM_EXCESS_PENAL(PARAM_EXCESS_PENAL_ID, "--excess-penalty", "penalize short overlaps", "Use float: 0.25 to 0.5", typeid(float), (void *) &excessPenal, "", MMseqsParameter::COMMAND_EXPERT),
-                        PARAM_CORR_THRESH(PARAM_CORR_THRESH_ID, "--correction-min-ry-seqid", "Seq. ident. in RY-space to increase precision of correction" , "Range 0-1", typeid(float), (void *) &correctionThreshold, "", MMseqsParameter::COMMAND_EXPERT),
-                        PARAM_CORR_THRESH_SEQID(PARAM_CORR_THRESH_SEQID_ID, "--correction-min-seqid", "Seq. ident. to increase precision of correction" , "Range 0-1", typeid(float), (void *) &correctionThresholdSeqId, "", MMseqsParameter::COMMAND_EXPERT),
-                        PARAM_READ_EXT_THRESH(PARAM_READ_EXT_THRESH_ID, "--likelihood-ratio-threshold", "Min. odds ratio threshold for read extension" , "Range 0-1", typeid(float), (void *) &likelihoodThreshold, "", MMseqsParameter::COMMAND_EXPERT),
-                        PARAM_DAMAGE_PATH(PARAM_DAMAGE_PATH_ID, "--ancient-damage", "path to deamination patterns of ancient DNA", "Path to dir", typeid(std::string), (void *) &ancientDamagePath, "", MMseqsParameter::COMMAND_EXPERT),
-                        PARAM_NUM_ITERATIONS_READS(PARAM_NUM_ITERATIONS_READS_ID, "--num-iter-reads-only", "Number of assembly iterations with raw reads only", "Raw reads only: Number of assembly iterations performed on nucleotide level,protein level (range 1-inf)", typeid(int), (void *)&numIterationsReads, "^[1-9]{1}[0-9]*$"),
-                        PARAM_MIN_SEQ_MERGE_ID(PARAM_MIN_SEQ_MERGE_ID_ID, "--min-merge-seq-id", "Seq. id. threshold during merging", "List matches above this sequence identity (for merging contigs) (range 0.0-1.0)", typeid(float), (void *) &mergeSeqIdThr, "", MMseqsParameter::COMMAND_EXPERT){
+                        PARAM_RAND_ALIGN(PARAM_RAND_ALIGN_ID, "--ext-random-align", "Random alignment (ancient)", "Use either: 0.8 or 0.9 (ancient)", typeid(float), (void *) &randomAlignPenal, "", MMseqsParameter::COMMAND_EXPERT),
+                        PARAM_EXCESS_PENAL(PARAM_EXCESS_PENAL_ID, "--excess-penalty", "Penalize short overlaps (ancient)", "Use float: 0.25 to 0.5 (ancient)", typeid(float), (void *) &excessPenal, "", MMseqsParameter::COMMAND_EXPERT),
+                        PARAM_CORR_THRESH(PARAM_CORR_THRESH_ID, "--correction-min-ry-seqid", "Seq. ident. in RY-space to increase precision of correction (ancient)" , "Range 0-1 (ancient)", typeid(float), (void *) &correctionThresholdRySeqId, "", MMseqsParameter::COMMAND_EXPERT),
+                        PARAM_CORR_THRESH_SEQID(PARAM_CORR_THRESH_SEQID_ID, "--correction-min-seqid", "Seq. ident. to increase precision of correction (ancient)" , "Range 0-1 (ancient)", typeid(float), (void *) &correctionThresholdSeqId, "", MMseqsParameter::COMMAND_EXPERT),
+                        PARAM_READ_EXT_THRESH(PARAM_READ_EXT_THRESH_ID, "--likelihood-ratio-threshold", "Min. odds ratio threshold for read extension (ancient)" , "Range 0-1 (ancient)", typeid(float), (void *) &likelihoodThreshold, "", MMseqsParameter::COMMAND_EXPERT),
+                        PARAM_DAMAGE_PATH(PARAM_DAMAGE_PATH_ID, "--ancient-damage", "Path to deamination patterns of ancient DNA (ancient)", "Path to dir (ancient)", typeid(std::string), (void *) &ancientDamagePath, "", MMseqsParameter::COMMAND_EXPERT),
+                        PARAM_NUM_ITERATIONS_READS(PARAM_NUM_ITERATIONS_READS_ID, "--num-iter-reads-only", "Number of assembly iterations with raw reads only (ancient)", "Raw reads only: Number of assembly iterations performed on nucleotide level (ancient)", typeid(int), (void *)&numIterationsReads, "^[1-9]{1}[0-9]*$"),
+                        PARAM_MIN_SEQ_MERGE_ID(PARAM_MIN_SEQ_MERGE_ID_ID, "--min-merge-seq-id", "Seq. id. threshold during merging (ancient)", "Minimum sequence identity for contig overlaps (ancient) (range 0.0-1.0)", typeid(float), (void *) &mergeSeqIdThr, "", MMseqsParameter::COMMAND_EXPERT),
+                        PARAM_CORR_CONTIG_MIN_SEQ_ID(PARAM_CORR_CONTIG_MIN_SEQ_ID_ID, "--min-seqid-corr-contigs", "Seq. id. threshold during contig correction (ancient)", "Minimum sequence identity for contig correction (ancient) (range 0.0-1.0)", typeid(float), (void *) &corrContigSeqId, "", MMseqsParameter::COMMAND_EXPERT),
+                        PARAM_ANCIENT_INCLUDE_ONLY_EXTENDABLE_READS(PARAM_ANCIENT_INCLUDE_ONLY_EXTENDABLE_READS_ID, "--include-only-extendable-ancient-reads", "Include only extendable in read extension (ancient)", "Include only extendable (reads onl, ancient)", typeid(bool), (void *) &ancientIncludeOnlyExtendReads, "", MMseqsParameter::COMMAND_EXPERT),
+                        PARAM_ANCIENT_PARAM_K_READS(PARAM_ANCIENT_PARAM_K_READS_ID, "-k-ancient-reads", "k-mer length reads (ancient)", "k-mer length read step (ancient)", typeid(int), (void *) &ancientKmerSizeReads, "^[0-9]{1}[0-9]*$", MMseqsParameter::COMMAND_EXPERT),
+                        PARAM_ANCIENT_INCLUDE_ONLY_EXTENDABLE_CONTIGS(PARAM_ANCIENT_INCLUDE_ONLY_EXTENDABLE_CONTIGS_ID, "--include-only-extendable-ancient-contigs", "Include only extendable in contig merging (ancient)", "Include only extendable (contigs, ancient)", typeid(bool), (void *) &ancientIncludeOnlyExtendContigs, "", MMseqsParameter::COMMAND_EXPERT),
+                        PARAM_ANCIENT_PARAM_K_CONTIGS(PARAM_ANCIENT_PARAM_K_CONTIGS_ID, "-k-ancient-contigs", "k-mer length contigs (ancient)", "k-mer length contig step (ancient)", typeid(int), (void *) &ancientKmerSizeContigs, "^[0-9]{1}[0-9]*$", MMseqsParameter::COMMAND_EXPERT),
+                        PARAM_ANCIENT_KMER_PER_SEQ_SCALE(PARAM_ANCIENT_KMER_PER_SEQ_SCALE_ID, "--kmer-per-seq-scale-ancient", "Scale k-mers per sequence (ancient)", "Scale k-mer per sequence based on sequence length as kmer-per-seq val + scale x seqlen (ancient)", typeid(MultiParam<float>), (void *) &kmersPerSequenceScale, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_EXPERT),
+                        PARAM_ANCIENT_KMER_PER_SEQ(PARAM_ANCIENT_KMER_PER_SEQ_ID, "--kmer-per-seq-ancient", "k-mers per sequence (ancient)", "k-mers per sequence (ancient)", typeid(int), (void *) &kmersPerSequence, "^[1-9]{1}[0-9]*$", MMseqsParameter::COMMAND_EXPERT),
+                        PARAM_ANCIENT_MIN_RYSEQ_ID(PARAM_ANCIENT_MIN_RYSEQ_ID_ID, "--min-ryseq-id", "RY-Seq. id. threshold (ancient)", "List matches above this sequence identity in RY-mer space (ancient) (range 0.0-1.0)", typeid(float), (void *) &rySeqIdThr, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_EXPERT)
+                        {
 
         // assembleresult
         assembleresults.push_back(&PARAM_MIN_SEQ_ID);
-        assembleresults.push_back(&PARAM_MIN_RYSEQ_ID);
         assembleresults.push_back(&PARAM_MAX_SEQ_LEN);
         assembleresults.push_back(&PARAM_THREADS);
         assembleresults.push_back(&PARAM_V);
@@ -170,6 +196,7 @@ class LocalParameters : public Parameters {
         assembleresults.push_back(&PARAM_CORR_THRESH_SEQID);
         assembleresults.push_back(&PARAM_READ_EXT_THRESH);
         assembleresults.push_back(&PARAM_MIN_SEQ_MERGE_ID);
+        assembleresults.push_back(&PARAM_CORR_CONTIG_MIN_SEQ_ID);
         assembleresults.push_back(&PARAM_DAMAGE_PATH);
 
         extractorfssubset.push_back(&PARAM_TRANSLATION_TABLE);
@@ -199,7 +226,6 @@ class LocalParameters : public Parameters {
         reduceredundancy.push_back(&PARAM_KMER_PER_SEQ_SCALE);
         reduceredundancy.push_back(&PARAM_IGNORE_MULTI_KMER);
         reduceredundancy.push_back(&PARAM_MIN_SEQ_ID);
-        reduceredundancy.push_back(&PARAM_MIN_RYSEQ_ID);
         reduceredundancy.push_back(&PARAM_COV_MODE);
         reduceredundancy.push_back(&PARAM_C);
         reduceredundancy.push_back(&PARAM_MAX_SEQ_LEN);
@@ -209,6 +235,21 @@ class LocalParameters : public Parameters {
         reduceredundancy.push_back(&PARAM_ZDROP);
         reduceredundancy.push_back(&PARAM_THREADS);
         reduceredundancy.push_back(&PARAM_REMOVE_TMP_FILES);
+
+        // kmermatcher contigs (subset of kmermatcher parameters which have to be adjusted)
+        ancientKmermatcherContigs.push_back(&PARAM_INCLUDE_ONLY_EXTENDABLE);
+        ancientKmermatcherContigs.push_back(&PARAM_K);
+        ancientKmermatcherContigs.push_back(&PARAM_KMER_PER_SEQ);
+        ancientKmermatcherContigs.push_back(&PARAM_KMER_PER_SEQ_SCALE);
+        ancientKmermatcherContigs = combineList(kmermatcher,ancientKmermatcherContigs);
+        // kmermatcherContigs.push_back;
+
+        // kmermatcher contigs (subset of kmermatcher parameters which have to be adjusted)
+        ancientKmermatcherReads.push_back(&PARAM_INCLUDE_ONLY_EXTENDABLE);
+        ancientKmermatcherReads.push_back(&PARAM_K);
+        ancientKmermatcherReads.push_back(&PARAM_KMER_PER_SEQ);
+        ancientKmermatcherReads.push_back(&PARAM_KMER_PER_SEQ_SCALE);
+        ancientKmermatcherReads = combineList(kmermatcher,ancientKmermatcherReads);
 
         // // kmermatcher (need to set different defaults)
         // kmermatcher.push_back(&PARAM_INCLUDE_ONLY_EXTENDABLE);
@@ -232,6 +273,8 @@ class LocalParameters : public Parameters {
         nuclassembleworkflow = combineList(nuclassembleworkflow, rescorediagonal);
         nuclassembleworkflow = combineList(nuclassembleworkflow, assembleresults);
         nuclassembleworkflow = combineList(nuclassembleworkflow, cyclecheck);
+        nuclassembleworkflow = combineList(nuclassembleworkflow, ancientKmermatcherContigs);
+        // nuclassembleworkflow = combineList(nuclassembleworkflow, ancientKmermatcherReads);
         //nuclassembleworkflow = combineList(nuclassembleworkflow, kmermatcher);
 
         nuclassembleworkflow.push_back(&PARAM_CYCLE_CHECK);
@@ -242,10 +285,10 @@ class LocalParameters : public Parameters {
         nuclassembleworkflow.push_back(&PARAM_DELETE_TMP_INC);
         nuclassembleworkflow.push_back(&PARAM_RUNNER);
         nuclassembleworkflow.push_back(&PARAM_NUM_ITERATIONS_READS);
+        nuclassembleworkflow.push_back(&PARAM_ANCIENT_MIN_RYSEQ_ID);
 
         // guidedassembleresults
         guidedassembleresults.push_back(&PARAM_MIN_SEQ_ID);
-        guidedassembleresults.push_back(&PARAM_MIN_RYSEQ_ID);
         guidedassembleresults.push_back(&PARAM_MAX_SEQ_LEN);
         guidedassembleresults.push_back(&PARAM_RESCORE_MODE);
         guidedassembleresults.push_back(&PARAM_THREADS);
@@ -256,7 +299,7 @@ class LocalParameters : public Parameters {
         guidedNuclAssembleworkflow = combineList(guidedNuclAssembleworkflow, nuclassembleworkflow);
         guidedNuclAssembleworkflow = combineList(guidedNuclAssembleworkflow, reduceredundancy);
         guidedNuclAssembleworkflow.push_back(&PARAM_CLUST_MIN_SEQ_ID_THR);
-        guidedNuclAssembleworkflow.push_back(&PARAM_CLUST_MIN_RYSEQ_ID_THR);
+        // guidedNuclAssembleworkflow.push_back(&PARAM_CLUST_MIN_RYSEQ_ID_THR);
         // guidedNuclAssembleworkflow.push_back(&PARAM_CLUST_RYMER_LEN);
         guidedNuclAssembleworkflow.push_back(&PARAM_CLUST_C);
         guidedNuclAssembleworkflow.push_back(&PARAM_USE_PREFILTER);
@@ -309,8 +352,6 @@ class LocalParameters : public Parameters {
         usePrefilter = 0;
         proteinFilterThreshold = 0.2;
         clustSeqIdThr = 0.97;
-        clustRySeqIdThr = 0.99;
-        // clustRySize = 32;
         clustCovThr = 0.99;
         minContigLen = 1000;
         chopCycle = true;
@@ -326,21 +367,29 @@ class LocalParameters : public Parameters {
         prefilterCompBiasCorrection = false;
 
         multiNumIterations = MultiParam<int>(9, 1);
-        numIterationsReads = 3;
+        numIterationsReads = 5;
         multiKmerSize = MultiParam<int>(14, 22);
         multiAlnLenThr = MultiParam<int>(0, 0);
         multiSeqIdThr = MultiParam<float>(0.97, 0.97);
         multiSpacedKmer = MultiParam<int>(0, 0);
         prefilterScoringMatrixFile =  MultiParam<char*>("blosum62.out", "nucleotide.out");
 
-        randomAlignPenal = 0.9;
-        excessPenal = 0.25;
-        correctionThreshold = 0.99;
-        correctionThresholdSeqId = 0.93;
-        likelihoodThreshold = 0.5;
+        randomAlignPenal = 0.75;
+        excessPenal = 0.33;
+        correctionThresholdRySeqId = 0.99;
+        correctionThresholdSeqId = 0.9;
+        likelihoodThreshold = 0.95;
         mergeSeqIdThr = 0.99;
+        corrContigSeqId = 0.95;
         ancientDamagePath = "";
 
+        ancientIncludeOnlyExtendReads = false;
+        ancientIncludeOnlyExtendContigs = true;
+        ancientKmerSizeReads = 20;
+        ancientKmerSizeContigs = 22;
+        ancientKmersPerSequenceScale = 0.2;
+        ancientkmersPerSequence = 200;
+        rySeqIdThr = 0.99;
     }
     LocalParameters(LocalParameters const &);
     ~LocalParameters(){};

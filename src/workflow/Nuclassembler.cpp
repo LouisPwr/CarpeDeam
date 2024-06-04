@@ -13,8 +13,7 @@ void setNuclAssemblerWorkflowDefaults(LocalParameters *p) {
     p->numIterationsReads = 3;
     p->kmerSize = 22;
     p->seqIdThr = 0.99;
-    p->rySeqIdThr = 0.99;
-    p->mergeSeqIdThr = 0.9;
+    p->mergeSeqIdThr = 0.99;
     p->alphabetSize = 5;
 
     p->covThr = 0.0;
@@ -99,13 +98,27 @@ int nuclassemble(int argc, const char **argv, const Command &command) {
     cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
     cmd.addVariable("NUM_IT_READS", SSTR(par.numIterationsReads).c_str());
 
-    par.includeOnlyExtendable = false;
+    //par.includeOnlyExtendable = false;
     // # 1. Finding exact $k$-mer matches.
     cmd.addVariable("KMERMATCHER_PAR", par.createParameterString(par.kmermatcher).c_str());
+
+    par.includeOnlyExtendable = par.ancientIncludeOnlyExtendReads;
+    par.kmerSize = par.ancientKmerSizeReads;
+    par.kmersPerSequence = par.ancientkmersPerSequence;
+    par.kmersPerSequenceScale = par.ancientKmersPerSequenceScale;
+    cmd.addVariable("KMERMATCHER_READS_PAR", par.createParameterString(par.ancientKmermatcherReads).c_str());
+
+    par.includeOnlyExtendable = par.ancientIncludeOnlyExtendContigs;
+    par.kmerSize = par.ancientKmerSizeContigs;
+    par.kmersPerSequence = par.ancientkmersPerSequence;
+    par.kmersPerSequenceScale = par.ancientKmersPerSequenceScale;
+    cmd.addVariable("KMERMATCHER_CONTIGS_PAR", par.createParameterString(par.ancientKmermatcherContigs).c_str());
 
     // # 2. Hamming distance pre-clustering
     par.filterHits = false;
     cmd.addVariable("UNGAPPED_ALN_PAR", par.createParameterString(par.rescorediagonal).c_str());
+
+    par.seqIdThr = par.corrContigSeqId;
     cmd.addVariable("ASSEMBLE_RESULT_PAR", par.createParameterString(par.assembleresults).c_str());
 
     cmd.addVariable("CALL_CYCLE_CHECK", par.cycleCheck ? "TRUE" : NULL);
@@ -121,10 +134,19 @@ int nuclassemble(int argc, const char **argv, const Command &command) {
     // Louis was here
     cmd.addVariable("RANDOM_ALN_PENAL", SSTR(par.randomAlignPenal).c_str());
     cmd.addVariable("PARAM_EXCESS_PENAL", SSTR(par.excessPenal).c_str());
-    cmd.addVariable("CORRECTION_THRESHOLD", SSTR(par.correctionThreshold).c_str());
+    cmd.addVariable("CORRECTION_THRESHOLD", SSTR(par.correctionThresholdRySeqId).c_str());
     cmd.addVariable("CORRECTION_THRESHOLD_SEQID", SSTR(par.correctionThresholdSeqId).c_str());
     cmd.addVariable("LIKELIHOOD_THRESHOLD", SSTR(par.likelihoodThreshold).c_str());
     cmd.addVariable("SEQ_ID_MERGE_THRESH", SSTR(par.mergeSeqIdThr).c_str());
+    cmd.addVariable("SEQ_ID_THRESH_CORR_CONTIG", SSTR(par.corrContigSeqId).c_str());
+    cmd.addVariable("PATH_TO_DAMAGE_PATTERN", SSTR(par.ancientDamagePath).c_str());
+
+
+    cmd.addVariable("KMER_SIZE_READS_ANCIENT", SSTR(par.ancientKmerSizeReads).c_str());
+    cmd.addVariable("KMER_SIZE_CONTIGS_ANCIENT", SSTR(par.ancientKmerSizeContigs).c_str());
+    cmd.addVariable("KMERS_PER_SEQ_ANCIENT", SSTR(par.ancientkmersPerSequence).c_str());
+    cmd.addVariable("KMERS_PER_SEQ_SCALE_ANCIENT", SSTR(par.ancientKmersPerSequenceScale).c_str());
+    cmd.addVariable("MIN_RYMER_SEQ_ID_ANCIENT", SSTR(par.rySeqIdThr).c_str());
     cmd.addVariable("PATH_TO_DAMAGE_PATTERN", SSTR(par.ancientDamagePath).c_str());
 
 

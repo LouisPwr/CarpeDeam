@@ -364,10 +364,8 @@ public:
     // PREFILTER
     float  sensitivity;                  // target sens
     int    kmerSize;                     // kmer size for the prefilter
-    int    rymerSize;                    // rymer size for rymermatcher
     int    kmerScore;                    // kmer score for the prefilter
     MultiParam<int> alphabetSize;                 // alphabet size for the prefilter
-    //bool    rymatcher;          // choice of kmermatcher index: Position 1 for read extension; Position 2 for contig extension
     int    compBiasCorrection;           // Aminoacid composiont correction
     bool   diagonalScoring;              // switch diagonal scoring
     int    exactKmerMatching;            // only exact k-mer matching
@@ -401,7 +399,6 @@ public:
     int    maxAccept;                    // after n accepted sequences stop
     int    altAlignment;                 // show up to this many alternative alignments
     float  seqIdThr;                     // sequence identity threshold for acceptance
-    float  rySeqIdThr;                   // sequence identity in RY-mer space for acceptance
     int    alnLenThr;                    // min. alignment length
     bool   addBacktrace;                 // store backtrace string (M=Match, D=deletion, I=insertion)
     bool   realign;                      // realign hit with more conservative score
@@ -683,11 +680,9 @@ public:
 
     PARAMETER(PARAM_S)
     PARAMETER(PARAM_K)
-    PARAMETER(PARAM_RY_SIZE)
     PARAMETER(PARAM_THREADS)
     PARAMETER(PARAM_COMPRESSED)
     PARAMETER(PARAM_ALPH_SIZE)
-    //PARAMETER(PARAM_MATCHER_CHOICE)
     PARAMETER(PARAM_MAX_SEQ_LEN)
     PARAMETER(PARAM_DIAGONAL_SCORING)
     PARAMETER(PARAM_EXACT_KMER_MATCHING)
@@ -726,7 +721,6 @@ public:
     PARAMETER(PARAM_ADD_BACKTRACE)
     PARAMETER(PARAM_REALIGN)
     PARAMETER(PARAM_MIN_SEQ_ID)
-    PARAMETER(PARAM_MIN_RYSEQ_ID)
     PARAMETER(PARAM_MIN_ALN_LEN)
     PARAMETER(PARAM_SCORE_BIAS)
     PARAMETER(PARAM_REALIGN_SCORE_BIAS)

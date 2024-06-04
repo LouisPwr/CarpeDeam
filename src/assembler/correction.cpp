@@ -1,10 +1,10 @@
 #include "nuclassembleUtil.h"
 const double SMOOTHING_VALUE = 0.001;
 
-#define DEBUGCORR
+//#define DEBUGCORR
 //#define DEBUCORR2
 
-int mostLikeliBaseRead(const int baseInQuery, const int qIter, const std::vector<countDeamCov> & deamVec, const std::vector<countDeamCov> & countRevs, const std::vector<diNucleotideProb> & subDeamDiNuc, const std::vector<diNucleotideProb> & subDeamDiNucRev, const diNucleotideProb & seqErrMatch, bool wasCorr, unsigned int querySeqLen)
+int mostLikeliBaseRead(const int baseInQuery, const unsigned int qIter, const std::vector<countDeamCov> & deamVec, const std::vector<countDeamCov> & countRevs, const std::vector<diNucleotideProb> & subDeamDiNuc, const std::vector<diNucleotideProb> & subDeamDiNucRev, const diNucleotideProb & seqErrMatch, bool wasCorr, unsigned int querySeqLen)
 {
     // Initial likelihod of qBase (either A,C,G or T)
     //std::vector<float> baseFreqs = { 0.23554, 0.26446, 0.26446, 0.23554 };
@@ -159,7 +159,6 @@ int doCorrection(LocalParameters &par) {
         subMat = new SubstitutionMatrix(par.scoringMatrixFile.aminoacids, 2.0, 0.0);
     }
 
-    SubstitutionMatrix::FastMatrix fastMatrix = SubstitutionMatrix::createAsciiSubMat(*subMat);
     EvalueComputation evaluer(sequenceDbr->getAminoAcidDBSize(), subMat);
 
     unsigned char * wasExtended = new unsigned char[sequenceDbr->getSize()];
@@ -234,7 +233,7 @@ int doCorrection(LocalParameters &par) {
 #pragma omp for schedule(dynamic, 100)
         for (size_t id = 0; id < sequenceDbr->getSize(); id++) {
             //auto startQuery = std::chrono::high_resolution_clock::now();
-            double sumLikeli = 0;
+            // double sumLikeli = 0;
 
             progress.updateProgress();
 
@@ -334,7 +333,7 @@ int doCorrection(LocalParameters &par) {
                 float ryId = getRYSeqId(targetRead, querySeq,  tSeq, ryMap);
                 targetRead.rySeqId = ryId;
 
-                float rymerThresh = par.correctionThreshold;
+                float rymerThresh = par.correctionThresholdRySeqId;
                 //float rymerThresh = 0.95;
                 if ( targetRead.alnLength <= 100){
                     rymerThresh = (static_cast<float>(targetRead.alnLength) - 1) / static_cast<float>(targetRead.alnLength);
@@ -441,7 +440,7 @@ int doCorrection(LocalParameters &par) {
                 float ryId = getRYSeqId(target, querySeq,  tSeq, ryMap);
                 target.rySeqId = ryId;
 
-                float rymerThresh = par.correctionThreshold;
+                float rymerThresh = par.correctionThresholdRySeqId;
                 //float rymerThresh = 0.95;
                 if ( target.alnLength <= 100){
                     rymerThresh = (static_cast<float>(target.alnLength) - 1) / static_cast<float>(target.alnLength);

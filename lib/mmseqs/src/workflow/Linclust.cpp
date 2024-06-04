@@ -15,7 +15,6 @@ void setLinclustWorkflowDefaults(Parameters *p) {
     p->maskMode = 0;
     p->evalThr = 0.001;
     p->seqIdThr = 0.9;
-    p->rySeqIdThr = 0.9;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
 }
 

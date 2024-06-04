@@ -102,7 +102,7 @@ while [ $STEP -lt $NUM_IT ]; do
         # 1. Finding exact $k$-mer matches.
         if notExists "${TMP_PATH}/pref_${STEP}.done"; then
             # shellcheck disable=SC2086
-            "$MMSEQS" kmermatcher "$INPUT" "${TMP_PATH}/pref_${STEP}" ${KMERMATCHER_PAR} \
+            "$MMSEQS" kmermatcher "$INPUT" "${TMP_PATH}/pref_${STEP}" ${KMERMATCHER_READS_PAR} \
                 || fail "Kmer matching step died"
             deleteIncremental "$PREV_KMER_PREF"
             touch "${TMP_PATH}/pref_${STEP}.done"
@@ -150,7 +150,7 @@ while [ $STEP -lt $NUM_IT ]; do
         # 1. Finding exact $k$-mer matches.
         if notExists "${TMP_PATH}/pref_asm_${STEP}.done"; then
             # shellcheck disable=SC2086
-            "$MMSEQS" rymermatcher "$INPUT" "${TMP_PATH}/pref_asm_${STEP}" ${KMERMATCHER_PAR} \
+            "$MMSEQS" kmermatcher "$INPUT" "${TMP_PATH}/pref_asm_${STEP}" ${KMERMATCHER_CONTIGS_PAR} \
             || fail "Kmer matching step died"
             deleteIncremental "$PREV_KMER_ASM_PREF"
             touch "${TMP_PATH}/pref_asm_${STEP}.done"

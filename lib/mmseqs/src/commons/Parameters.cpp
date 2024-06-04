@@ -37,7 +37,6 @@ Parameters::Parameters():
         alphabetSize(INT_MAX,INT_MAX),
         PARAM_S(PARAM_S_ID, "-s", "Sensitivity", "Sensitivity: 1.0 faster; 4.0 fast; 7.5 sensitive", typeid(float), (void *) &sensitivity, "^[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_PREFILTER),
         PARAM_K(PARAM_K_ID, "-k", "k-mer length", "k-mer length (0: automatically set to optimum)", typeid(int), (void *) &kmerSize, "^[0-9]{1}[0-9]*$", MMseqsParameter::COMMAND_PREFILTER | MMseqsParameter::COMMAND_CLUSTLINEAR | MMseqsParameter::COMMAND_EXPERT),
-        PARAM_RY_SIZE(PARAM_RY_SIZE_ID, "--ry-size-matcher", "Lenght of RY-mers used for rymermatcher", "RY-mer length for late iterations", typeid(int), (void *)&rymerSize, "",  MMseqsParameter::COMMAND_CLUSTLINEAR | MMseqsParameter::COMMAND_EXPERT),
         PARAM_THREADS(PARAM_THREADS_ID, "--threads", "Threads", "Number of CPU-cores used (all by default)", typeid(int), (void *) &threads, "^[1-9]{1}[0-9]*$", MMseqsParameter::COMMAND_COMMON),
         PARAM_COMPRESSED(PARAM_COMPRESSED_ID, "--compressed", "Compressed", "Write compressed output", typeid(int), (void *) &compressed, "^[0-1]{1}$", MMseqsParameter::COMMAND_COMMON),
         PARAM_ALPH_SIZE(PARAM_ALPH_SIZE_ID, "--alph-size", "Alphabet size", "Alphabet size (range 2-21)", typeid(MultiParam<int>), (void *) &alphabetSize, "", MMseqsParameter::COMMAND_PREFILTER | MMseqsParameter::COMMAND_CLUSTLINEAR | MMseqsParameter::COMMAND_EXPERT),
@@ -75,7 +74,6 @@ Parameters::Parameters():
         PARAM_ADD_BACKTRACE(PARAM_ADD_BACKTRACE_ID, "-a", "Add backtrace", "Add backtrace string (convert to alignments with mmseqs convertalis module)", typeid(bool), (void *) &addBacktrace, "", MMseqsParameter::COMMAND_ALIGN),
         PARAM_REALIGN(PARAM_REALIGN_ID, "--realign", "Realign hits", "Compute more conservative, shorter alignments (scores and E-values not changed)", typeid(bool), (void *) &realign, "", MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT),
         PARAM_MIN_SEQ_ID(PARAM_MIN_SEQ_ID_ID, "--min-seq-id", "Seq. id. threshold", "List matches above this sequence identity (for clustering) (range 0.0-1.0)", typeid(float), (void *) &seqIdThr, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_ALIGN),
-        PARAM_MIN_RYSEQ_ID(PARAM_MIN_RYSEQ_ID_ID, "--min-ryseq-id", "RY-Seq. id. threshold", "List matches above this sequence identity in RY-mer space (for clustering) (range 0.0-1.0)", typeid(float), (void *) &rySeqIdThr, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_ALIGN),
         PARAM_MIN_ALN_LEN(PARAM_MIN_ALN_LEN_ID, "--min-aln-len", "Min alignment length", "Minimum alignment length (range 0-INT_MAX)", typeid(int), (void *) &alnLenThr, "^[0-9]{1}[0-9]*$", MMseqsParameter::COMMAND_ALIGN),
         PARAM_SCORE_BIAS(PARAM_SCORE_BIAS_ID, "--score-bias", "Score bias", "Score bias when computing SW alignment (in bits)", typeid(float), (void *) &scoreBias, "^-?[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT),
         PARAM_REALIGN_SCORE_BIAS(PARAM_REALIGN_SCORE_BIAS_ID, "--realign-score-bias", "Realign score bias", "Additional bias when computing realignment", typeid(float), (void *) &realignScoreBias, "^-?[0-9]*(\\.[0-9]+)?$", MMseqsParameter::COMMAND_ALIGN | MMseqsParameter::COMMAND_EXPERT),
@@ -316,7 +314,6 @@ Parameters::Parameters():
 //    alignall.push_back(&PARAM_WRAPPED_SCORING);
     alignall.push_back(&PARAM_E);
     alignall.push_back(&PARAM_MIN_SEQ_ID);
-    //alignall.push_back(&PARAM_MIN_RYSEQ_ID);
     alignall.push_back(&PARAM_MIN_ALN_LEN);
     alignall.push_back(&PARAM_SEQ_ID_MODE);
 //    alignall.push_back(&PARAM_ALT_ALIGNMENT);
@@ -347,7 +344,6 @@ Parameters::Parameters():
     align.push_back(&PARAM_WRAPPED_SCORING);
     align.push_back(&PARAM_E);
     align.push_back(&PARAM_MIN_SEQ_ID);
-    align.push_back(&PARAM_MIN_RYSEQ_ID);
     align.push_back(&PARAM_MIN_ALN_LEN);
     align.push_back(&PARAM_SEQ_ID_MODE);
     align.push_back(&PARAM_ALT_ALIGNMENT);
@@ -379,7 +375,6 @@ Parameters::Parameters():
     prefilter.push_back(&PARAM_K);
     prefilter.push_back(&PARAM_K_SCORE);
     prefilter.push_back(&PARAM_ALPH_SIZE);
-    //prefilter.push_back(&PARAM_MATCHER_CHOICE);
     prefilter.push_back(&PARAM_MAX_SEQ_LEN);
     prefilter.push_back(&PARAM_MAX_SEQS);
     prefilter.push_back(&PARAM_SPLIT);
@@ -434,7 +429,6 @@ Parameters::Parameters():
     rescorediagonal.push_back(&PARAM_ADD_BACKTRACE);
     rescorediagonal.push_back(&PARAM_COV_MODE);
     rescorediagonal.push_back(&PARAM_MIN_SEQ_ID);
-    //rescorediagonal.push_back(&PARAM_MIN_RYSEQ_ID);
     rescorediagonal.push_back(&PARAM_MIN_ALN_LEN);
     rescorediagonal.push_back(&PARAM_SEQ_ID_MODE);
     rescorediagonal.push_back(&PARAM_INCLUDE_IDENTITY);
@@ -454,6 +448,7 @@ Parameters::Parameters():
     alignbykmer.push_back(&PARAM_C);
     alignbykmer.push_back(&PARAM_E);
     alignbykmer.push_back(&PARAM_COV_MODE);
+    alignbykmer.push_back(&PARAM_MIN_SEQ_ID);
     alignbykmer.push_back(&PARAM_MIN_ALN_LEN);
     alignbykmer.push_back(&PARAM_INCLUDE_IDENTITY);
     alignbykmer.push_back(&PARAM_GAP_OPEN);
@@ -696,7 +691,6 @@ Parameters::Parameters():
     // create index
     indexdb.push_back(&PARAM_SEED_SUB_MAT);
     indexdb.push_back(&PARAM_K);
-    indexdb.push_back(&PARAM_RY_SIZE);
     indexdb.push_back(&PARAM_ALPH_SIZE);
     indexdb.push_back(&PARAM_NO_COMP_BIAS_CORR);
     indexdb.push_back(&PARAM_MAX_SEQ_LEN);
@@ -717,12 +711,10 @@ Parameters::Parameters():
     // create kmer index
     kmerindexdb.push_back(&PARAM_SEED_SUB_MAT);
     kmerindexdb.push_back(&PARAM_K);
-    kmerindexdb.push_back(&PARAM_RY_SIZE);
     kmerindexdb.push_back(&PARAM_HASH_SHIFT);
     kmerindexdb.push_back(&PARAM_KMER_PER_SEQ);
     kmerindexdb.push_back(&PARAM_KMER_PER_SEQ_SCALE);
     kmerindexdb.push_back(&PARAM_MIN_SEQ_ID);
-    //kmerindexdb.push_back(&PARAM_MIN_RYSEQ_ID);
     kmerindexdb.push_back(&PARAM_ADJUST_KMER_LEN);
     kmerindexdb.push_back(&PARAM_SPLIT_MEMORY_LIMIT);
     kmerindexdb.push_back(&PARAM_IGNORE_MULTI_KMER);
@@ -879,9 +871,7 @@ Parameters::Parameters():
     // kmermatcher
     kmermatcher.push_back(&PARAM_SUB_MAT);
     kmermatcher.push_back(&PARAM_ALPH_SIZE);
-    //kmermatcher.push_back(&PARAM_MATCHER_CHOICE);
     kmermatcher.push_back(&PARAM_MIN_SEQ_ID);
-    //kmermatcher.push_back(&PARAM_MIN_RYSEQ_ID);
     kmermatcher.push_back(&PARAM_KMER_PER_SEQ);
     kmermatcher.push_back(&PARAM_SPACED_KMER_MODE);
     kmermatcher.push_back(&PARAM_SPACED_KMER_PATTERN);
@@ -891,7 +881,6 @@ Parameters::Parameters():
     kmermatcher.push_back(&PARAM_MASK_LOWER_CASE);
     kmermatcher.push_back(&PARAM_COV_MODE);
     kmermatcher.push_back(&PARAM_K);
-    kmermatcher.push_back(&PARAM_RY_SIZE);
     kmermatcher.push_back(&PARAM_C);
     kmermatcher.push_back(&PARAM_MAX_SEQ_LEN);
     kmermatcher.push_back(&PARAM_HASH_SHIFT);
@@ -920,7 +909,6 @@ Parameters::Parameters():
 
     // countkmer
     countkmer.push_back(&PARAM_K);
-    countkmer.push_back(&PARAM_RY_SIZE);
     countkmer.push_back(&PARAM_SPACED_KMER_MODE);
     countkmer.push_back(&PARAM_SPACED_KMER_PATTERN);
     countkmer.push_back(&PARAM_THREADS);
@@ -1314,7 +1302,6 @@ void Parameters::printUsageMessage(const Command& command, const unsigned int ou
             {"align",    MMseqsParameter::COMMAND_ALIGN},
             {"clust",    MMseqsParameter::COMMAND_CLUST},
             {"kmermatcher", MMseqsParameter::COMMAND_CLUSTLINEAR},
-            {"rymermatcher", MMseqsParameter::COMMAND_CLUSTLINEAR},
             {"profile",  MMseqsParameter::COMMAND_PROFILE},
             {"misc",     MMseqsParameter::COMMAND_MISC},
             {"common",   MMseqsParameter::COMMAND_COMMON},
@@ -2104,10 +2091,8 @@ void Parameters::setDefaults() {
     seedScoringMatrixFile = MultiParam<char*>("VTML80.out", "nucleotide.out");
 
     kmerSize =  0;
-    rymerSize = 32;
     kmerScore = INT_MAX;
     alphabetSize = MultiParam<int>(21,5);
-    //rymatcher = false;
     maxSeqLen = MAX_SEQ_LEN; // 2^16
     maxResListLen = 300;
     sensitivity = 4;
@@ -2166,7 +2151,6 @@ void Parameters::setDefaults() {
     maxRejected = INT_MAX;
     maxAccept   = INT_MAX;
     seqIdThr = 0.0;
-    rySeqIdThr = 0.99;
     alnLenThr = 0;
     altAlignment = 0;
     gapOpen = MultiParam<int>(11, 5);
@@ -2246,7 +2230,7 @@ void Parameters::setDefaults() {
     verbosity = Debug::INFO;
 
     //extractorfs
-    orfMinLength = 10;
+    orfMinLength = 30;
     orfMaxLength = 32734;
     orfMaxGaps = INT_MAX;
     contigStartMode = 2;

@@ -411,7 +411,7 @@ void compareAndPrintIfDifferent(const diNucleotideProb& vec1, const diNucleotide
         }
 }
 
-std::pair<bool, bool> mgeFinderContigs(std::vector<Matcher::result_t> & alignments, DBReader<unsigned int>* sequenceDbr, char *querySeq, const unsigned int querySeqLen, unsigned int queryKey, unsigned int thread_idx, LocalParameters &par, NucleotideMatrix *subMat, const std::vector<diNucleotideProb> & subDeamDiNuc, const std::vector<diNucleotideProb> & subDeamDiNucRev, const diNucleotideProb & seqErrMatch){
+std::pair<bool, bool> mgeFinderContigs(std::vector<Matcher::result_t> & alignments, DBReader<unsigned int>* sequenceDbr, char *querySeq, const unsigned int querySeqLen, unsigned int queryKey, unsigned int thread_idx, LocalParameters &par, NucleotideMatrix *subMat){
 
     std::unordered_map<char, int> nucleotideMap = {
     {'A', 0},
@@ -432,7 +432,7 @@ std::pair<bool, bool> mgeFinderContigs(std::vector<Matcher::result_t> & alignmen
     std::vector<Matcher::result_t> mgeCandiRight;
     std::vector<Matcher::result_t> mgeCandiLeft;
 
-    float rymerThresh = par.correctionThreshold;
+    float rymerThresh = par.correctionThresholdRySeqId;
 
     // define thresholds to include extension candidates for the mge-identifier
     // float alnSeqIdThr = par.seqIdThr;
@@ -453,7 +453,7 @@ std::pair<bool, bool> mgeFinderContigs(std::vector<Matcher::result_t> & alignmen
         unsigned int resId = sequenceDbr->getId(res.dbKey);
         const bool notRightStartAndLeftStart = !(res.dbStartPos == 0 && res.qStartPos == 0 );
         const bool rightStart = res.dbStartPos == 0 && (res.dbEndPos != static_cast<int>(res.dbLen)-1);
-        const bool leftStart = res.qStartPos == 0   && (res.qEndPos != static_cast<int>(res.qLen)-1);
+        const bool leftStart = res.qStartPos == 0 && (res.qEndPos != static_cast<int>(res.qLen)-1);
         const bool isNotIdentity = (dbKey != queryKey);
 
 
@@ -494,7 +494,7 @@ std::pair<bool, bool> mgeFinderContigs(std::vector<Matcher::result_t> & alignmen
                 res.rySeqId = ryId;
             }
 
-            if ( res.seqId >= 0.999 ){
+            if ( res.seqId >= 0.99 ){
                 // count only the left and right extensions which extensions should be compared
                 //if (res.seqId > alnSeqIdThr && (res.dbLen - res.alnLength <= extLen)){
                 //if (res.seqId >= alnSeqIdThr){
@@ -602,8 +602,8 @@ std::pair<bool, bool> mgeFinderContigs(std::vector<Matcher::result_t> & alignmen
             char *rightExtCandiSequ = sequenceDbr->getData(rightExtCandiId, thread_idx);
             std::string rightExtCandiSeq;
 
-            bool isBadCandi = false;
-            std::vector<long double> expSim;
+            //bool isBadCandi = false;
+            //std::vector<long double> expSim;
             if (righty.isRevToAlignment) {
                 // Convert the reversed fragment to std::string
                 char *rightExtCandiSeqTmp = getNuclRevFragment(rightExtCandiSequ, rightExtCandiLen, (NucleotideMatrix *)subMat);
@@ -628,10 +628,14 @@ std::pair<bool, bool> mgeFinderContigs(std::vector<Matcher::result_t> & alignmen
                 idRyCnt += (ryMap[rightLongestExtSeq[rightLongestExt.dbEndPos + rightPos]] == ryMap[rightExtCandiSeq[righty.dbEndPos + rightPos]]) ? 1 : 0;
             }
 
-            float seqId = static_cast<float>(idCnt) / othersExtLen;
+            //float seqId = static_cast<float>(idCnt) / othersExtLen;
             float rySeqId = static_cast<float>(idRyCnt) / othersExtLen;
 
-            if ( rySeqId < rymerThresh ){
+            // check for number of C-T and G-A mismatches:
+            unsigned int ryMM = idRyCnt - idCnt;
+            unsigned int ryMMThr = (othersExtLen + 5) / 50; //allowing for 5% mismatch rate
+
+            if ( rySeqId < rymerThresh && ( (othersExtLen < 10 && ryMM <= 2) || ryMM <= ryMMThr )){
                 mgeFoundRight = true;
                 break;
             } 
@@ -730,8 +734,8 @@ std::pair<bool, bool> mgeFinderContigs(std::vector<Matcher::result_t> & alignmen
             char *leftExtCandiSequ = sequenceDbr->getData(leftExtCandiId, thread_idx);
             std::string leftExtCandiSeq;
 
-            bool isBadCandi = false;
-            std::vector<long double> expSim;
+            //bool isBadCandi = false;
+            //std::vector<long double> expSim;
             if (lefty.isRevToAlignment) {
                 // Convert the reversed fragment to std::string
                 char *leftExtCandiSeqTmp = getNuclRevFragment(leftExtCandiSequ, leftExtCandiLen, (NucleotideMatrix *)subMat);
@@ -755,10 +759,14 @@ std::pair<bool, bool> mgeFinderContigs(std::vector<Matcher::result_t> & alignmen
                 idRyCnt += (ryMap[leftLongestExtSeq[leftLongestExt.dbStartPos - 1 - leftPos]] == ryMap[leftExtCandiSeq[lefty.dbStartPos - 1 - leftPos]]) ? 1 : 0;
             }
 
-            float seqId = static_cast<float>(idCnt) / othersExtLen;
+            //float seqId = static_cast<float>(idCnt) / othersExtLen;
             float rySeqId = static_cast<float>(idRyCnt) / othersExtLen;
+            
+            // check for number of C-T and G-A mismatches:
+            unsigned int ryMM = idRyCnt - idCnt;
+            unsigned int ryMMThr = (othersExtLen + 5) / 50; //allowing for 5% mismatch rate
 
-            if ( rySeqId < rymerThresh ){
+            if ( rySeqId < rymerThresh && ( (othersExtLen < 10 && ryMM <= 2) || ryMM <= ryMMThr )){
                 mgeFoundLeft = true;
                 break;
             } 
@@ -880,7 +888,7 @@ std::pair<bool, bool> mgeFinder(std::vector<Matcher::result_t> & alignments, DBR
             std::string resSeqStr;
             float ryId;
 
-            float rymerThresh = par.correctionThreshold;
+            float rymerThresh = par.correctionThresholdRySeqId;
             //float rymerThresh = 0.95;
             if ( res.alnLength <= 100){
                 rymerThresh = (static_cast<float>(res.alnLength) - 1) / static_cast<float>(res.alnLength);
@@ -1315,7 +1323,7 @@ std::vector<long double> calcLikelihoodCorrection(const Matcher::result_t & righ
     unsigned int qoffset = 0;
     const std::string rymerBase = "1010";
 
-    unsigned int longest = (rightLongestCandi.dbLen > candidate.dbLen) ? rightLongestCandi.dbLen : candidate.dbLen;
+    //unsigned int longest = (rightLongestCandi.dbLen > candidate.dbLen) ? rightLongestCandi.dbLen : candidate.dbLen;
 
     unsigned int minExt = candidate.dbLen - candidate.alnLength;
     unsigned int minALn = (rightLongestCandi.alnLength < candidate.alnLength) ? rightLongestCandi.alnLength : candidate.alnLength;
