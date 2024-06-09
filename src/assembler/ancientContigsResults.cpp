@@ -74,13 +74,22 @@ public:
             return true;
         if (p  > 0.55)
             return false;
-        // if (r1.dbLen - r1.alnLength < r2.dbLen - r2.alnLength)
-        //     return true;
-        // if (r1.dbLen - r1.alnLength > r2.dbLen - r2.alnLength)
-        //     return false;
+        // if ( r1.alnLength > 200 && r2.alnLength > 200 ){
+        //     if ( r1.seqId > r2.seqId ){
+        //         return false;
+        //     }
+        //     if ( r2.seqId > r1.seqId ){
+        //         return true;
+        //     }
+        // }
+        if (r1.alnLength < r2.alnLength)
+            return true;
+        if (r1.alnLength > r2.alnLength)
+            return false;
+        // before simply longer alignment
 
 
-        // if ( r1.alnLength < 200 || r2.alnLength < 200 ){
+        // if ( r1.dbLen < 200 || r2.dbLen < 200 ){
         //     if (r1.alnLength < r2.alnLength)
         //         return true;
         //     if (r1.alnLength > r2.alnLength)
@@ -92,16 +101,16 @@ public:
         //         return true;
         //     }
         // }
-        if ( r1.seqId > r2.seqId ){
-            return false;
-        }
-        if ( r2.seqId > r1.seqId ){
-            return true;
-        }
-        if (r1.alnLength > r2.alnLength)
-            return false;
-        if (r1.alnLength < r2.alnLength)
-            return true;
+        // if ( r1.seqId > r2.seqId ){
+        //     return false;
+        // }
+        // if ( r2.seqId > r1.seqId ){
+        //     return true;
+        // }
+        // if (r1.alnLength > r2.alnLength)
+        //     return false;
+        // if (r1.alnLength < r2.alnLength)
+        //     return true;
 
 
 
@@ -259,13 +268,13 @@ int doNuclAssembly2(LocalParameters &par) {
             unsigned int countRightExt = 0;
             unsigned int countLeftExt = 0;
 
+            std::vector<Matcher::result_t> contigs;
+
             // Update sequence identity
             for (unsigned int idx = 0; idx < alignments.size(); idx++){
                 // now retrieve the other candidate extensions and get their sequences
 
-                Matcher::result_t aln2update = alignments[idx];
-
-                unsigned int aln2updateId = sequenceDbr->getId(aln2update.dbKey);
+                unsigned int aln2updateId = sequenceDbr->getId(alignments[idx].dbKey);
                 unsigned int aln2updateLen = sequenceDbr->getSeqLen(aln2updateId);
 
                 if ( aln2updateId == queryKey ){
@@ -275,53 +284,92 @@ int doNuclAssembly2(LocalParameters &par) {
                 char *aln2updateSequ = sequenceDbr->getData(aln2updateId, thread_idx);
                 std::string aln2updateSeq;
 
-                if (aln2update.isRevToAlignment) {
+                if (alignments[idx].qStartPos > alignments[idx].qEndPos) {
                     // Convert the reversed fragment to std::string
+                    useReverse[sequenceDbr->getId(alignments[idx].dbKey)] = true;
+                    alignments[idx].isRevToAlignment = true;
+
+                    std::swap(alignments[idx].qStartPos, alignments[idx].qEndPos);
+                    unsigned int dbStartPos = alignments[idx].dbStartPos;
+                    alignments[idx].dbStartPos = alignments[idx].dbLen - alignments[idx].dbEndPos - 1;
+                    alignments[idx].dbEndPos= alignments[idx].dbLen - dbStartPos - 1;
+
                     char *rightExtCandiSeqTmp = getNuclRevFragment(aln2updateSequ, aln2updateLen, (NucleotideMatrix *)subMat);
                     aln2updateSeq = std::string(rightExtCandiSeqTmp, aln2updateLen);
                     delete[] rightExtCandiSeqTmp;
                 } else {
                     // Directly convert the raw sequence to std::string
                     aln2updateSeq = std::string(aln2updateSequ, aln2updateLen);
+                    useReverse[sequenceDbr->getId(alignments[idx].dbKey)] = false;
+                    alignments[idx].isRevToAlignment = false;
                 }
 
                 // calculate the sequence identity
                 int idCnt = 0;
                 int idRyCnt = 0;
-                for (int i = aln2update.qStartPos; i < aln2update.qEndPos; i++) {
-                    idCnt += (querySeq[i] == aln2updateSeq[aln2update.dbStartPos + (i-aln2update.qStartPos)]) ? 1 : 0;
-                    idRyCnt += (ryMap[querySeq[i]] == ryMap[aln2updateSeq[aln2update.dbStartPos + (i-aln2update.qStartPos)]]) ? 1 : 0;
+                for (int i = alignments[idx].qStartPos; i <= alignments[idx].qEndPos; i++) {
+                    idCnt += (querySeq[i] == aln2updateSeq[alignments[idx].dbStartPos + (i-alignments[idx].qStartPos)]) ? 1 : 0;
+                    idRyCnt += (ryMap[querySeq[i]] == ryMap[aln2updateSeq[alignments[idx].dbStartPos + (i-alignments[idx].qStartPos)]]) ? 1 : 0;
                 }
-                float seqId = static_cast<float>(idCnt) / querySeqLen;
-                float rySeqId = static_cast<float>(idRyCnt) / querySeqLen;
+                float seqId = static_cast<float>(idCnt) / alignments[idx].alnLength;
+                float rySeqId = static_cast<float>(idRyCnt) / alignments[idx].alnLength;
 
-                aln2update.seqId = seqId;
-                aln2update.rySeqId = rySeqId;
-            }
+                // #pragma omp critical
+                // {
+                //     std::cerr << "UPDATE NUCLALN" << std::endl;
+                //     std::cerr << "alnLen " << alignments[idx].alnLength << std::endl;
+                //     std::cerr << "idRyCnt " << idRyCnt << std::endl;
+                //     std::cerr << "rySeqId " << rySeqId << std::endl;
+                //     std::cerr << "idCnt " << idCnt << std::endl;
+                //     std::cerr << "seqId " << seqId << std::endl;
+                //     std::cerr << "query " << querySeq << std::endl;
+                //     std::cerr << "aln2updateSequ " << aln2updateSequ << std::endl;
+                //     std::cerr << "aln2updateSeq " << aln2updateSeq << std::endl;
+                // }
 
+                alignments[idx].seqId = seqId;
+                alignments[idx].rySeqId = rySeqId;
 
-            std::pair<bool, bool> mgefound = mgeFinderContigs(alignments, sequenceDbr, querySeq, querySeqLen, queryKey, thread_idx, par, (NucleotideMatrix *) subMat);
-            mgeFoundLeft = mgefound.first;
-            mgeFoundRight = mgefound.second;
-
-            // choose only contigs
-            std::vector<Matcher::result_t> contigs;
-            //double poorMansQueryCov = coverage[queryKey];
-            for (size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
-
-                unsigned int targetId = sequenceDbr->getId(alignments[alnIdx].dbKey);
+                unsigned int targetId = sequenceDbr->getId(alignments[idx].dbKey);
                 bool targetWasExt = sequenceDbr->getExtData(targetId);
 
-                if ( targetWasExt == true ){
-                    contigs.push_back(alignments[alnIdx]); 
+                //if ( targetWasExt == true && alignments[alnIdx].alnLength >= 30 ){
+                if ( alignments[idx].seqId >= par.mergeSeqIdThr && alignments[idx].rySeqId >= par.rySeqIdThr){
+                    // if ( alignments[alnIdx].dbLen <= 1500 || (alignments[alnIdx].dbLen > 1500 && alignments[alnIdx].alnLength >= 500) ){
+                        contigs.push_back(alignments[idx]); 
+                    // }
                 }
-
             }
+
+            // // std::pair<bool, bool> mgefound = mgeFinderContigs(alignments, sequenceDbr, querySeq, querySeqLen, queryKey, thread_idx, par, (NucleotideMatrix *) subMat);
+            // // mgeFoundLeft = mgefound.first;
+            // // mgeFoundRight = mgefound.second;
+
+            // // choose only contigs
+            // std::vector<Matcher::result_t> contigs;
+            // //double poorMansQueryCov = coverage[queryKey];
+            // for (size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
+
+            //     unsigned int targetId = sequenceDbr->getId(alignments[alnIdx].dbKey);
+            //     bool targetWasExt = sequenceDbr->getExtData(targetId);
+
+            //     std::cerr << "seqId " <<   alignments[alnIdx].seqId << std::endl;
+            //     std::cerr << "ry seq id " <<  alignments[alnIdx].rySeqId << std::endl;
+
+            //     //if ( targetWasExt == true && alignments[alnIdx].alnLength >= 30 ){
+            //     if ( alignments[alnIdx].seqId >= par.mergeSeqIdThr && alignments[alnIdx].rySeqId >= par.rySeqIdThr ){
+            //         // if ( alignments[alnIdx].dbLen <= 1500 || (alignments[alnIdx].dbLen > 1500 && alignments[alnIdx].alnLength >= 500) ){
+            //             contigs.push_back(alignments[alnIdx]); 
+            //         // }
+            //     }
+            // }
             alignments.clear();
 
-            // std::pair<bool, bool> mgefound = mgeFinderContigs(contigs, sequenceDbr, querySeq, querySeqLen, queryKey, thread_idx, par, (NucleotideMatrix *) subMat);
-            // mgeFoundLeft = mgefound.first;
-            // mgeFoundRight = mgefound.second;
+            std::pair<bool, bool> mgefound = mgeFinderContigs(contigs, sequenceDbr, querySeq, querySeqLen, queryKey, thread_idx, par, (NucleotideMatrix *) subMat);
+            mgeFoundLeft = mgefound.first;
+            mgeFoundRight = mgefound.second;
+            // std::cerr << "mgeFoundLeft\t" << mgefound.first << std::endl;
+            // std::cerr << "mgeFoundRight\t" << mgefound.second << std::endl;
 
 
             // fill queue
@@ -335,21 +383,21 @@ int doNuclAssembly2(LocalParameters &par) {
                 //contigs[alnIdx].seqId = ids / (alnLen + 0.5);
                 contigs[alnIdx].score = static_cast<int>(scorePerCol*100);
 
-                if (seqType == Parameters::DBTYPE_NUCLEOTIDES) {
-                    if (contigs[alnIdx].qStartPos > contigs[alnIdx].qEndPos) {
-                        useReverse[sequenceDbr->getId(contigs[alnIdx].dbKey)] = true;
+                // if (seqType == Parameters::DBTYPE_NUCLEOTIDES) {
+                //     if (contigs[alnIdx].qStartPos > contigs[alnIdx].qEndPos) {
+                //         useReverse[sequenceDbr->getId(contigs[alnIdx].dbKey)] = true;
 
-                        std::swap(contigs[alnIdx].qStartPos, contigs[alnIdx].qEndPos);
-                        unsigned int dbStartPos = contigs[alnIdx].dbStartPos;
-                        contigs[alnIdx].dbStartPos = contigs[alnIdx].dbLen - contigs[alnIdx].dbEndPos - 1;
-                        contigs[alnIdx].dbEndPos= contigs[alnIdx].dbLen - dbStartPos - 1;
-                        contigs[alnIdx].isRevToAlignment = true;
+                //         std::swap(contigs[alnIdx].qStartPos, contigs[alnIdx].qEndPos);
+                //         unsigned int dbStartPos = contigs[alnIdx].dbStartPos;
+                //         contigs[alnIdx].dbStartPos = contigs[alnIdx].dbLen - contigs[alnIdx].dbEndPos - 1;
+                //         contigs[alnIdx].dbEndPos= contigs[alnIdx].dbLen - dbStartPos - 1;
+                //         contigs[alnIdx].isRevToAlignment = true;
 
-                    } else {
-                        useReverse[sequenceDbr->getId(contigs[alnIdx].dbKey)] = false;
-                        contigs[alnIdx].isRevToAlignment = false;
-                    }
-                }
+                //     } else {
+                //         useReverse[sequenceDbr->getId(contigs[alnIdx].dbKey)] = false;
+                //         contigs[alnIdx].isRevToAlignment = false;
+                //     }
+                // }
 
 
                 size_t tId = sequenceDbr->getId(contigs[alnIdx].dbKey);

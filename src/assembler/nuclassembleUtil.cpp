@@ -628,17 +628,44 @@ std::pair<bool, bool> mgeFinderContigs(std::vector<Matcher::result_t> & alignmen
                 idRyCnt += (ryMap[rightLongestExtSeq[rightLongestExt.dbEndPos + rightPos]] == ryMap[rightExtCandiSeq[righty.dbEndPos + rightPos]]) ? 1 : 0;
             }
 
-            //float seqId = static_cast<float>(idCnt) / othersExtLen;
+            float seqId = static_cast<float>(idCnt) / othersExtLen;
             float rySeqId = static_cast<float>(idRyCnt) / othersExtLen;
+
+                // #pragma omp critical
+                // {
+                //     std::cerr << "MGEFINDER RIGHT" << std::endl;
+                //     std::cerr << "othersExtLen " << othersExtLen << std::endl;
+                //     std::cerr << "idRyCnt " << idRyCnt << std::endl;
+                //     std::cerr << "rySeqId " << rySeqId << std::endl;
+                //     std::cerr << "idCnt " << idCnt << std::endl;
+                //     std::cerr << "seqId " << seqId << std::endl;
+                //     std::cerr << "query " << querySeq << std::endl;
+                //     std::cerr << "rightLongestExtSeq " << rightLongestExtSeq << std::endl;
+                //     std::cerr << "rightExtCandiSeq " << rightExtCandiSeq << std::endl;
+                // }
 
             // check for number of C-T and G-A mismatches:
             unsigned int ryMM = idRyCnt - idCnt;
-            unsigned int ryMMThr = (othersExtLen + 5) / 50; //allowing for 5% mismatch rate
+            unsigned int ryMMThr = othersExtLen * 0.1; //allowing for 2% mismatch rate
 
-            if ( rySeqId < rymerThresh && ( (othersExtLen < 10 && ryMM <= 2) || ryMM <= ryMMThr )){
+            // if ( rySeqId < rymerThresh ){
+            // //if ( rySeqId < rymerThresh && ( (othersExtLen <= 10 && ryMM <= 2) || ryMM <= ryMMThr )){
+            // //if ( rySeqId < rymerThresh || ( (othersExtLen < 10 && ryMM > 2) || seqId < 0.95 )){
+            // //if ( rySeqId < rymerThresh || ( (othersExtLen < 10 && ryMM > 2) || seqId < 0.95 )){
+            //     mgeFoundRight = true;
+            //     break;
+            // } 
+
+            if (othersExtLen <= 20 && ryMM > 2) {
                 mgeFoundRight = true;
                 break;
-            } 
+            } else if (rySeqId < rymerThresh) {
+                mgeFoundRight = true;
+                break;
+            } else if ( ryMM > ryMMThr ){
+                mgeFoundRight = true;
+                break;  
+            }
 
 #ifdef DEBUGCORR
         if ( queryKey == 4631784 ){
@@ -759,17 +786,38 @@ std::pair<bool, bool> mgeFinderContigs(std::vector<Matcher::result_t> & alignmen
                 idRyCnt += (ryMap[leftLongestExtSeq[leftLongestExt.dbStartPos - 1 - leftPos]] == ryMap[leftExtCandiSeq[lefty.dbStartPos - 1 - leftPos]]) ? 1 : 0;
             }
 
-            //float seqId = static_cast<float>(idCnt) / othersExtLen;
+            float seqId = static_cast<float>(idCnt) / othersExtLen;
             float rySeqId = static_cast<float>(idRyCnt) / othersExtLen;
             
             // check for number of C-T and G-A mismatches:
             unsigned int ryMM = idRyCnt - idCnt;
-            unsigned int ryMMThr = (othersExtLen + 5) / 50; //allowing for 5% mismatch rate
+            unsigned int ryMMThr = othersExtLen * 0.1; //allowing for 2% mismatch rate
 
-            if ( rySeqId < rymerThresh && ( (othersExtLen < 10 && ryMM <= 2) || ryMM <= ryMMThr )){
+            // //if ( rySeqId < rymerThresh ){
+            // //if ( rySeqId < rymerThresh && ( (othersExtLen <= 10 && ryMM <= 2) || ryMM <= ryMMThr )){
+            // if ( rySeqId < rymerThresh || ( (othersExtLen < 10 && ryMM <= 2) || seqId < 0.95 )){
+            //     mgeFoundLeft = true;
+            //     break;
+            // } 
+
+            // if (rySeqId < rymerThresh) {
+            //     mgeFoundLeft = true;
+            //     break;
+            // } else if (othersExtLen <= 10 && ryMM > 1) {
+            //     mgeFoundLeft = true;
+            //     break;
+            // }
+
+            if (othersExtLen <= 20 && ryMM > 2) {
                 mgeFoundLeft = true;
                 break;
-            } 
+            } else if (rySeqId < rymerThresh) {
+                mgeFoundLeft = true;
+                break;
+            } else if ( ryMM > ryMMThr ){
+                mgeFoundLeft = true;
+                break;  
+            }
 
 #ifdef DEBUGCORR
         if ( queryKey == 4631784 ){

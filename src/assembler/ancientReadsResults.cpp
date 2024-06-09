@@ -256,45 +256,11 @@ int doNuclAssembly1(LocalParameters &par) {
                                             
             }
 
-
-            // // Iterate over all alignments and update the alignments (only the overlapping ones) to get more accurate seqids since previous step was correction
-            // for(size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
-
-            //     if ( (alignments[alnIdx].dbStartPos == 0 && static_cast<unsigned int>(alignments[alnIdx].qEndPos) == (querySeqLen - 1)) || (alignments[alnIdx].qStartPos == 0 && static_cast<unsigned int>(alignments[alnIdx].dbEndPos) == (alignments[alnIdx].dbLen - 1)) ) {
-
-            //         unsigned int tId = sequenceDbr->getId(alignments[alnIdx].dbKey);
-            //         unsigned int tSeqLen = sequenceDbr->getSeqLen(tId);
-            //         char *tSeq = sequenceDbr->getData(tId, thread_idx);
-            //         bool deleteTargetSeq = false;
-            //         if (useReverse[tId]){
-            //             tSeq = getNuclRevFragment(tSeq, tSeqLen, (NucleotideMatrix *) subMat);
-            //             deleteTargetSeq = true;
-            //         }
-                        
-            //         int qStartPos = alignments[alnIdx].qStartPos;
-            //         int dbStartPos = alignments[alnIdx].dbStartPos;
-            //         int diag = (qStartPos) - dbStartPos;
-
-            //         DistanceCalculator::LocalAlignment alignment = DistanceCalculator::ungappedAlignmentByDiagonal(
-            //                                                         querySeq, querySeqLen, tSeq, tSeqLen,
-            //                                                         diag, fastMatrix.matrix, par.rescoreMode);
-
-            //         updateNuclAlignment(alignments[alnIdx], alignment, querySeq, querySeqLen, tSeq, tSeqLen);
-
-            //         if (deleteTargetSeq) {
-            //             delete[] tSeq;
-            //         }
-            //     }
-            // }
-
-            // update sequence identity
-            // Iterate through all candidates and compare to the longest
+            // // update sequence identity
             for (unsigned int idx = 0; idx < alignments.size(); idx++){
                 // now retrieve the other candidate extensions and get their sequences
 
-                Matcher::result_t aln2update = alignments[idx];
-
-                unsigned int aln2updateId = sequenceDbr->getId(aln2update.dbKey);
+                unsigned int aln2updateId = sequenceDbr->getId(alignments[idx].dbKey);
                 unsigned int aln2updateLen = sequenceDbr->getSeqLen(aln2updateId);
 
                 if ( aln2updateId == queryKey ){
@@ -304,7 +270,7 @@ int doNuclAssembly1(LocalParameters &par) {
                 char *aln2updateSequ = sequenceDbr->getData(aln2updateId, thread_idx);
                 std::string aln2updateSeq;
 
-                if (aln2update.isRevToAlignment) {
+                if (alignments[idx].isRevToAlignment) {
                     // Convert the reversed fragment to std::string
                     char *rightExtCandiSeqTmp = getNuclRevFragment(aln2updateSequ, aln2updateLen, (NucleotideMatrix *)subMat);
                     aln2updateSeq = std::string(rightExtCandiSeqTmp, aln2updateLen);
@@ -317,20 +283,30 @@ int doNuclAssembly1(LocalParameters &par) {
                 // calculate the sequence identity
                 int idCnt = 0;
                 int idRyCnt = 0;
-                for (int i = aln2update.qStartPos; i < aln2update.qEndPos; i++) {
-                    idCnt += (querySeq[i] == aln2updateSeq[aln2update.dbStartPos + (i-aln2update.qStartPos)]) ? 1 : 0;
-                    idRyCnt += (ryMap[querySeq[i]] == ryMap[aln2updateSeq[aln2update.dbStartPos + (i-aln2update.qStartPos)]]) ? 1 : 0;
+                for (int i = alignments[idx].qStartPos; i <= alignments[idx].qEndPos; i++) {
+                    idCnt += (querySeq[i] == aln2updateSeq[alignments[idx].dbStartPos + (i-alignments[idx].qStartPos)]) ? 1 : 0;
+                    idRyCnt += (ryMap[querySeq[i]] == ryMap[aln2updateSeq[alignments[idx].dbStartPos + (i-alignments[idx].qStartPos)]]) ? 1 : 0;
                 }
-                float seqId = static_cast<float>(idCnt) / querySeqLen;
-                float rySeqId = static_cast<float>(idRyCnt) / querySeqLen;
+                float seqId = static_cast<float>(idCnt) / alignments[idx].alnLength;
+                float rySeqId = static_cast<float>(idRyCnt) / alignments[idx].alnLength;
 
-                aln2update.seqId = seqId;
-                aln2update.rySeqId = rySeqId;
+                    // std::cerr << "alnLen " << alignments[idx].alnLength << std::endl;
+                    // std::cerr << "idRyCnt " << idRyCnt << std::endl;
+                    // std::cerr << "rySeqId " << rySeqId << std::endl;
+                    // std::cerr << "idCnt " << idCnt << std::endl;
+                    // std::cerr << "seqId " << seqId << std::endl;
+                    // std::cerr << "query " << querySeq << std::endl;
+                    // std::cerr << "aln2updateSequ " << aln2updateSequ << std::endl;
+                    // std::cerr << "aln2updateSeq " << aln2updateSeq << std::endl;
+
+                alignments[idx].seqId = seqId;
+                alignments[idx].rySeqId = rySeqId;
             }
 
             for (size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
                 unsigned int targetId = sequenceDbr->getId(alignments[alnIdx].dbKey);
                 bool isContig = sequenceDbr->getExtData(targetId);
+                //if ( isContig == false && alignments[alnIdx].alnLength >= 30 && alignments[alnIdx].seqId >= par.seqIdThr ){
                 if ( isContig == false && alignments[alnIdx].alnLength >= 30 && alignments[alnIdx].seqId >= par.seqIdThr ){
                     notContig.push_back(alignments[alnIdx]);
                 }
