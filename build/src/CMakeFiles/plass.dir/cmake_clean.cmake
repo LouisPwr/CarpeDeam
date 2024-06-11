@@ -1,0 +1,41 @@
+file(REMOVE_RECURSE
+  "CMakeFiles/plass.dir/assembler/ancientContigsResults.cpp.o"
+  "CMakeFiles/plass.dir/assembler/ancientContigsResults.cpp.o.d"
+  "CMakeFiles/plass.dir/assembler/ancientReadsResults.cpp.o"
+  "CMakeFiles/plass.dir/assembler/ancientReadsResults.cpp.o.d"
+  "CMakeFiles/plass.dir/assembler/assembleresult.cpp.o"
+  "CMakeFiles/plass.dir/assembler/assembleresult.cpp.o.d"
+  "CMakeFiles/plass.dir/assembler/correction.cpp.o"
+  "CMakeFiles/plass.dir/assembler/correction.cpp.o.d"
+  "CMakeFiles/plass.dir/assembler/cyclecheck.cpp.o"
+  "CMakeFiles/plass.dir/assembler/cyclecheck.cpp.o.d"
+  "CMakeFiles/plass.dir/assembler/filternoncoding.cpp.o"
+  "CMakeFiles/plass.dir/assembler/filternoncoding.cpp.o.d"
+  "CMakeFiles/plass.dir/assembler/findassemblystart.cpp.o"
+  "CMakeFiles/plass.dir/assembler/findassemblystart.cpp.o.d"
+  "CMakeFiles/plass.dir/assembler/guidedassembleresult.cpp.o"
+  "CMakeFiles/plass.dir/assembler/guidedassembleresult.cpp.o.d"
+  "CMakeFiles/plass.dir/assembler/mergereads.cpp.o"
+  "CMakeFiles/plass.dir/assembler/mergereads.cpp.o.d"
+  "CMakeFiles/plass.dir/assembler/nuclassembleUtil.cpp.o"
+  "CMakeFiles/plass.dir/assembler/nuclassembleUtil.cpp.o.d"
+  "CMakeFiles/plass.dir/commons/LocalParameters.cpp.o"
+  "CMakeFiles/plass.dir/commons/LocalParameters.cpp.o.d"
+  "CMakeFiles/plass.dir/plass.cpp.o"
+  "CMakeFiles/plass.dir/plass.cpp.o.d"
+  "CMakeFiles/plass.dir/util/createhdb.cpp.o"
+  "CMakeFiles/plass.dir/util/createhdb.cpp.o.d"
+  "CMakeFiles/plass.dir/workflow/Assembler.cpp.o"
+  "CMakeFiles/plass.dir/workflow/Assembler.cpp.o.d"
+  "CMakeFiles/plass.dir/workflow/GuidedNuclassembler.cpp.o"
+  "CMakeFiles/plass.dir/workflow/GuidedNuclassembler.cpp.o.d"
+  "CMakeFiles/plass.dir/workflow/Nuclassembler.cpp.o"
+  "CMakeFiles/plass.dir/workflow/Nuclassembler.cpp.o.d"
+  "plass"
+  "plass.pdb"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang CXX)
+  include(CMakeFiles/plass.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

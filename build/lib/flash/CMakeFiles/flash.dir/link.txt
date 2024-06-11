@@ -1,0 +1,2 @@
+/vol/cloud/louis/miniconda3/envs/all/bin/x86_64-conda-linux-gnu-ar qc libflash.a CMakeFiles/flash.dir/combine_reads.cpp.o CMakeFiles/flash.dir/read.cpp.o CMakeFiles/flash.dir/util.cpp.o
+/vol/cloud/louis/miniconda3/envs/all/bin/x86_64-conda-linux-gnu-ranlib libflash.a

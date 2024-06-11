@@ -1,0 +1,2 @@
+/vol/cloud/louis/miniconda3/envs/all/bin/x86_64-conda-linux-gnu-ar qc libkerasify.a CMakeFiles/kerasify.dir/keras_model.cpp.o
+/vol/cloud/louis/miniconda3/envs/all/bin/x86_64-conda-linux-gnu-ranlib libkerasify.a

@@ -1,0 +1,2 @@
+/vol/cloud/louis/miniconda3/envs/all/bin/x86_64-conda-linux-gnu-ar qc libversion.a CMakeFiles/version.dir/Version.cpp.o
+/vol/cloud/louis/miniconda3/envs/all/bin/x86_64-conda-linux-gnu-ranlib libversion.a
