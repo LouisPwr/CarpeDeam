@@ -1,8 +1,8 @@
-# Install script for directory: /vol/cloud/louis/apps/CarpeDeam15/lib/mmseqs/src/taxonomy
+# Install script for directory: /vol/cloud/louis/apps/CarpeDeam15.3/lib/mmseqs/src/taxonomy
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "/vol/cloud/louis/apps/CarpeDeam15/build")
+  set(CMAKE_INSTALL_PREFIX "/vol/cloud/louis/apps/CarpeDeam15.3/build")
 endif()
 string(REGEX REPLACE "/$" "" CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 

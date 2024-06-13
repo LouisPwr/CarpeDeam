@@ -46,7 +46,7 @@ std::vector<unsigned int> getMaxAlnLen(std::vector<Matcher::result_t> &alignment
 }
 
 
-scorePerRes r_s_pair(Matcher::result_t res, char* querySeq, char* targetSeq, std::vector<diNucleotideProb> &subDeamDiNuc, std::vector<diNucleotideProb> &subDeamDiNucRev, unsigned int maxLeft, unsigned int maxRight, float randAlnPenal, diNucleotideProb & seqErrMatch, float excessPenal)
+scorePerRes r_s_pair(Matcher::result_t res, std::string & consensus, char* targetSeq, unsigned int querySeqLen, std::vector<diNucleotideProb> &subDeamDiNuc, std::vector<diNucleotideProb> &subDeamDiNucRev, unsigned int & maxLeft, unsigned int & maxRight, float randAlnPenal, diNucleotideProb & seqErrMatch, float excessPenal)
 {
     scorePerRes fiveToThree;
     //scorePerRes threeToFive;
@@ -62,7 +62,8 @@ scorePerRes r_s_pair(Matcher::result_t res, char* querySeq, char* targetSeq, std
 
     std::vector<diNucleotideProb> subDeamDiNucRef = res.isRevToAlignment ? subDeamDiNucRev : subDeamDiNuc;
 
-    calcLikelihood(fiveToThree, querySeq, targetSeq, subDeamDiNucRef, maxOverlap, randAlnPenal, seqErrMatch, excessPenal);
+    //calcLikelihood(fiveToThree, querySeq, targetSeq, subDeamDiNucRef, maxOverlap, randAlnPenal, seqErrMatch, excessPenal);
+    calcLikelihoodConsensus(fiveToThree, consensus, querySeqLen, targetSeq, subDeamDiNucRef, maxOverlap, randAlnPenal, seqErrMatch, excessPenal);
     // Modifying ThreeToFive
     //std::cerr << " REV " << std::endl;
     //calc_likelihood(threeToFive, querySeq, targetSeq, subDeamDiNucRev, maxOverlap, isRightOverlap, randAlnPenal, seqErrMatch, seqErrMis);
@@ -256,7 +257,7 @@ int doNuclAssembly1(LocalParameters &par) {
                                             
             }
 
-            // // update sequence identity
+            // update sequence identity
             for (unsigned int idx = 0; idx < alignments.size(); idx++){
                 // now retrieve the other candidate extensions and get their sequences
 
@@ -304,26 +305,29 @@ int doNuclAssembly1(LocalParameters &par) {
             }
 
             for (size_t alnIdx = 0; alnIdx < alignments.size(); alnIdx++) {
+                bool noOffset = (alignments[alnIdx].dbLen - alignments[alnIdx].alnLength) == 0;
                 unsigned int targetId = sequenceDbr->getId(alignments[alnIdx].dbKey);
                 bool isContig = sequenceDbr->getExtData(targetId);
                 //if ( isContig == false && alignments[alnIdx].alnLength >= 30 && alignments[alnIdx].seqId >= par.seqIdThr ){
-                if ( isContig == false && alignments[alnIdx].alnLength >= 30 && alignments[alnIdx].seqId >= par.seqIdThr ){
+                if ( isContig == false && alignments[alnIdx].alnLength >= 30 && alignments[alnIdx].seqId >= par.seqIdThr && !noOffset ){
                     notContig.push_back(alignments[alnIdx]);
                 }
             }
             alignments.clear();
 
-            // Plan for dividing the extension:
-            // 1. If target == read -> do damage aware extension
-            // 2. If targer == contig -> do default extension
-            // --> Make a vector with all target that are reads and make a vector with all target that are contigs
+            std::string consensus = std::string(querySeq, querySeqLen);
+            unsigned int maxAlnLeft = 0;
+            unsigned int maxAlnRight = 0;
+    
+            consensus = consensusCaller(notContig, sequenceDbr, querySeq, querySeqLen, queryKey, thread_idx, par, (NucleotideMatrix *) subMat);
+            updateSeqIdConsensusReads(notContig, sequenceDbr, consensus, querySeq, querySeqLen, queryKey, thread_idx, par, (NucleotideMatrix *) subMat, maxAlnLeft, maxAlnRight); 
 
-            // 1. ONLY DAMAGE AWARE EXTENSION
+            // ONLY DAMAGE AWARE EXTENSION
 
-            std::vector<unsigned int> maxAlign = getMaxAlnLen(notContig, queryKey);
-            unsigned int maxAlnLeft = maxAlign[0];
-            unsigned int maxAlnRight = maxAlign[1];
-            maxAlign.clear();
+            // std::vector<unsigned int> maxAlign = getMaxAlnLen(notContig, queryKey);
+            // unsigned int maxAlnLeft = maxAlign[0];
+            // unsigned int maxAlnRight = maxAlign[1];
+            // maxAlign.clear();
 
             for (size_t alnIdx = 0; alnIdx < notContig.size(); alnIdx++) {
 
@@ -340,9 +344,9 @@ int doNuclAssembly1(LocalParameters &par) {
                     deleteTargetSeq = true; 
                 }
 
-                float ryId = getRYSeqId(notContig[alnIdx], querySeq,  targetSeq, ryMap);
-                ryId = std::round(ryId * 1000.0f) / 1000.0f;
-                notContig[alnIdx].rySeqId = ryId;
+                // float ryId = getRYSeqId(notContig[alnIdx], querySeq,  targetSeq, ryMap);
+                // ryId = std::round(ryId * 1000.0f) / 1000.0f;
+                // notContig[alnIdx].rySeqId = ryId;
 
                 bool notInside = notContig[alnIdx].dbLen != notContig[alnIdx].alnLength;
                 const bool rightStart = notContig[alnIdx].dbStartPos == 0;
@@ -373,7 +377,14 @@ int doNuclAssembly1(LocalParameters &par) {
 
                 if ( (rightStart || leftStart) && notInside && isNotIdentity && notContig[alnIdx].rySeqId >= par.rySeqIdThr && notContig[alnIdx].seqId >= par.seqIdThr)
                 {
-                    scorePerRes toAdd = r_s_pair(notContig[alnIdx], querySeq, targetSeq, subDeamDiNuc, subDeamDiNucRev, maxAlnLeft, maxAlnRight, randAlnPenal, seqErrMatch, par.excessPenal);
+                    // #pragma omp critical
+                    // std::cerr << "Before FIRST" << std::endl;
+                    // #pragma omp critical
+                    // std::cerr << querySeq;
+                    scorePerRes toAdd = r_s_pair(notContig[alnIdx], consensus, targetSeq, querySeqLen, subDeamDiNuc, subDeamDiNucRev, maxAlnLeft, maxAlnRight, randAlnPenal, seqErrMatch, par.excessPenal);
+                    // #pragma omp critical
+                    // std::cerr << "After FIRST" << std::endl;
+
 
 #ifdef DEBUGEXT
                     std::string outputLine = std::to_string(toAdd.sRatio) + "\t" +
@@ -597,10 +608,13 @@ int doNuclAssembly1(LocalParameters &par) {
                 }
 
 
-                std::vector<unsigned int> maxAlign = getMaxAlnLen(tmpAlignmentsReads, queryKey);
-                maxAlnLeft = maxAlign[0];
-                maxAlnRight = maxAlign[1];
-                maxAlign.clear();
+                // std::vector<unsigned int> maxAlign = getMaxAlnLen(tmpAlignmentsReads, queryKey);
+                // maxAlnLeft = maxAlign[0];
+                // maxAlnRight = maxAlign[1];
+                // maxAlign.clear();
+
+                consensus = consensusCaller(tmpAlignmentsReads, sequenceDbr, querySeq, querySeqLen, queryKey, thread_idx, par, (NucleotideMatrix *) subMat);
+                updateSeqIdConsensusReads(tmpAlignmentsReads, sequenceDbr, consensus, querySeq, querySeqLen, queryKey, thread_idx, par, (NucleotideMatrix *) subMat, maxAlnLeft, maxAlnRight); 
 
                 for(size_t alnIdx = 0; alnIdx < tmpAlignmentsReads.size(); alnIdx++) {
                     bool notInside = tmpAlignmentsReads[alnIdx].dbLen != tmpAlignmentsReads[alnIdx].alnLength;
@@ -620,7 +634,11 @@ int doNuclAssembly1(LocalParameters &par) {
                                 deleteTargetSeq = true;
                             }
 
-                            scorePerRes toAdd = r_s_pair(tmpAlignmentsReads[alnIdx], querySeq, tSeq, subDeamDiNuc, subDeamDiNucRev, maxAlnLeft, maxAlnRight, randAlnPenal, seqErrMatch, par.excessPenal);
+                            // #pragma omp critical
+                            // std::cerr << "Before SECOND" << std::endl;
+                            scorePerRes toAdd = r_s_pair(tmpAlignmentsReads[alnIdx], consensus, tSeq, querySeqLen,subDeamDiNuc, subDeamDiNucRev, maxAlnLeft, maxAlnRight, randAlnPenal, seqErrMatch, par.excessPenal);
+                            // #pragma omp critical
+                            // std::cerr << "After SECOND" << std::endl;
                             if ( toAdd.sRatio > par.likelihoodThreshold ) {
                                 alnQueueReads.push( toAdd );
                             }

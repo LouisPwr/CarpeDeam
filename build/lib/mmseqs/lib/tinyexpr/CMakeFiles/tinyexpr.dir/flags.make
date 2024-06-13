@@ -4,7 +4,7 @@
 # compile C with /vol/cloud/louis/miniconda3/envs/all/bin/x86_64-conda-linux-gnu-cc
 C_DEFINES = 
 
-C_INCLUDES = -I/vol/cloud/louis/apps/CarpeDeam15/lib/mmseqs/lib/zstd/lib -I/vol/cloud/louis/apps/CarpeDeam15/lib/mmseqs/lib/tinyexpr
+C_INCLUDES = -I/vol/cloud/louis/apps/CarpeDeam15.3/lib/mmseqs/lib/zstd/lib -I/vol/cloud/louis/apps/CarpeDeam15.3/lib/mmseqs/lib/tinyexpr
 
 C_FLAGS = -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /vol/cloud/louis/miniconda3/envs/all/include -I/vol/cloud/louis/apps/zlib-1.3/include -ansi -Wall -Wshadow -fPIC -O3 -O3 -DNDEBUG -fsigned-char -march=native
 

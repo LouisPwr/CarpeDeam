@@ -1,8 +1,8 @@
-# Install script for directory: /vol/cloud/louis/apps/CarpeDeam15/src
+# Install script for directory: /vol/cloud/louis/apps/CarpeDeam15.3/src
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "/vol/cloud/louis/apps/CarpeDeam15/build")
+  set(CMAKE_INSTALL_PREFIX "/vol/cloud/louis/apps/CarpeDeam15.3/build")
 endif()
 string(REGEX REPLACE "/$" "" CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 
@@ -49,7 +49,7 @@ if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT
          FILE "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/bin/plass"
          RPATH "")
   endif()
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin" TYPE EXECUTABLE FILES "/vol/cloud/louis/apps/CarpeDeam15/build/src/plass")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/bin" TYPE EXECUTABLE FILES "/vol/cloud/louis/apps/CarpeDeam15.3/build/src/plass")
   if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/bin/plass" AND
      NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/bin/plass")
     if(CMAKE_INSTALL_DO_STRIP)
@@ -60,11 +60,11 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("/vol/cloud/louis/apps/CarpeDeam15/build/src/assembler/cmake_install.cmake")
-  include("/vol/cloud/louis/apps/CarpeDeam15/build/src/commons/cmake_install.cmake")
-  include("/vol/cloud/louis/apps/CarpeDeam15/build/src/version/cmake_install.cmake")
-  include("/vol/cloud/louis/apps/CarpeDeam15/build/src/workflow/cmake_install.cmake")
-  include("/vol/cloud/louis/apps/CarpeDeam15/build/src/util/cmake_install.cmake")
+  include("/vol/cloud/louis/apps/CarpeDeam15.3/build/src/assembler/cmake_install.cmake")
+  include("/vol/cloud/louis/apps/CarpeDeam15.3/build/src/commons/cmake_install.cmake")
+  include("/vol/cloud/louis/apps/CarpeDeam15.3/build/src/version/cmake_install.cmake")
+  include("/vol/cloud/louis/apps/CarpeDeam15.3/build/src/workflow/cmake_install.cmake")
+  include("/vol/cloud/louis/apps/CarpeDeam15.3/build/src/util/cmake_install.cmake")
 
 endif()
 

@@ -1,8 +1,8 @@
-# Install script for directory: /vol/cloud/louis/apps/CarpeDeam15
+# Install script for directory: /vol/cloud/louis/apps/CarpeDeam15.3
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "/vol/cloud/louis/apps/CarpeDeam15/build")
+  set(CMAKE_INSTALL_PREFIX "/vol/cloud/louis/apps/CarpeDeam15.3/build")
 endif()
 string(REGEX REPLACE "/$" "" CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 
@@ -44,11 +44,11 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("/vol/cloud/louis/apps/CarpeDeam15/build/lib/mmseqs/cmake_install.cmake")
-  include("/vol/cloud/louis/apps/CarpeDeam15/build/data/cmake_install.cmake")
-  include("/vol/cloud/louis/apps/CarpeDeam15/build/lib/kerasify/cmake_install.cmake")
-  include("/vol/cloud/louis/apps/CarpeDeam15/build/lib/flash/cmake_install.cmake")
-  include("/vol/cloud/louis/apps/CarpeDeam15/build/src/cmake_install.cmake")
+  include("/vol/cloud/louis/apps/CarpeDeam15.3/build/lib/mmseqs/cmake_install.cmake")
+  include("/vol/cloud/louis/apps/CarpeDeam15.3/build/data/cmake_install.cmake")
+  include("/vol/cloud/louis/apps/CarpeDeam15.3/build/lib/kerasify/cmake_install.cmake")
+  include("/vol/cloud/louis/apps/CarpeDeam15.3/build/lib/flash/cmake_install.cmake")
+  include("/vol/cloud/louis/apps/CarpeDeam15.3/build/src/cmake_install.cmake")
 
 endif()
 
@@ -60,5 +60,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/vol/cloud/louis/apps/CarpeDeam15/build/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/vol/cloud/louis/apps/CarpeDeam15.3/build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

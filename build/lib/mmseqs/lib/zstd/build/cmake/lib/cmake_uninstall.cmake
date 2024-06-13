@@ -1,9 +1,9 @@
  
-if(NOT EXISTS "/vol/cloud/louis/apps/CarpeDeam15/build/install_manifest.txt")
-  message(FATAL_ERROR "Cannot find install manifest: /vol/cloud/louis/apps/CarpeDeam15/build/install_manifest.txt")
-endif(NOT EXISTS "/vol/cloud/louis/apps/CarpeDeam15/build/install_manifest.txt")
+if(NOT EXISTS "/vol/cloud/louis/apps/CarpeDeam15.3/build/install_manifest.txt")
+  message(FATAL_ERROR "Cannot find install manifest: /vol/cloud/louis/apps/CarpeDeam15.3/build/install_manifest.txt")
+endif(NOT EXISTS "/vol/cloud/louis/apps/CarpeDeam15.3/build/install_manifest.txt")
 
-file(READ "/vol/cloud/louis/apps/CarpeDeam15/build/install_manifest.txt" files)
+file(READ "/vol/cloud/louis/apps/CarpeDeam15.3/build/install_manifest.txt" files)
 string(REGEX REPLACE "\n" ";" files "${files}")
 foreach(file ${files})
   message(STATUS "Uninstalling $ENV{DESTDIR}${file}")

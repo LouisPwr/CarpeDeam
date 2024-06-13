@@ -1,8 +1,8 @@
-# Install script for directory: /vol/cloud/louis/apps/CarpeDeam15/lib/mmseqs/src
+# Install script for directory: /vol/cloud/louis/apps/CarpeDeam15.3/lib/mmseqs/src
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "/vol/cloud/louis/apps/CarpeDeam15/build")
+  set(CMAKE_INSTALL_PREFIX "/vol/cloud/louis/apps/CarpeDeam15.3/build")
 endif()
 string(REGEX REPLACE "/$" "" CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 
@@ -44,15 +44,15 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("/vol/cloud/louis/apps/CarpeDeam15/build/lib/mmseqs/src/alignment/cmake_install.cmake")
-  include("/vol/cloud/louis/apps/CarpeDeam15/build/lib/mmseqs/src/clustering/cmake_install.cmake")
-  include("/vol/cloud/louis/apps/CarpeDeam15/build/lib/mmseqs/src/commons/cmake_install.cmake")
-  include("/vol/cloud/louis/apps/CarpeDeam15/build/lib/mmseqs/src/linclust/cmake_install.cmake")
-  include("/vol/cloud/louis/apps/CarpeDeam15/build/lib/mmseqs/src/multihit/cmake_install.cmake")
-  include("/vol/cloud/louis/apps/CarpeDeam15/build/lib/mmseqs/src/prefiltering/cmake_install.cmake")
-  include("/vol/cloud/louis/apps/CarpeDeam15/build/lib/mmseqs/src/taxonomy/cmake_install.cmake")
-  include("/vol/cloud/louis/apps/CarpeDeam15/build/lib/mmseqs/src/util/cmake_install.cmake")
-  include("/vol/cloud/louis/apps/CarpeDeam15/build/lib/mmseqs/src/workflow/cmake_install.cmake")
+  include("/vol/cloud/louis/apps/CarpeDeam15.3/build/lib/mmseqs/src/alignment/cmake_install.cmake")
+  include("/vol/cloud/louis/apps/CarpeDeam15.3/build/lib/mmseqs/src/clustering/cmake_install.cmake")
+  include("/vol/cloud/louis/apps/CarpeDeam15.3/build/lib/mmseqs/src/commons/cmake_install.cmake")
+  include("/vol/cloud/louis/apps/CarpeDeam15.3/build/lib/mmseqs/src/linclust/cmake_install.cmake")
+  include("/vol/cloud/louis/apps/CarpeDeam15.3/build/lib/mmseqs/src/multihit/cmake_install.cmake")
+  include("/vol/cloud/louis/apps/CarpeDeam15.3/build/lib/mmseqs/src/prefiltering/cmake_install.cmake")
+  include("/vol/cloud/louis/apps/CarpeDeam15.3/build/lib/mmseqs/src/taxonomy/cmake_install.cmake")
+  include("/vol/cloud/louis/apps/CarpeDeam15.3/build/lib/mmseqs/src/util/cmake_install.cmake")
+  include("/vol/cloud/louis/apps/CarpeDeam15.3/build/lib/mmseqs/src/workflow/cmake_install.cmake")
 
 endif()
 

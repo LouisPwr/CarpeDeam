@@ -272,10 +272,6 @@ int doNuclAssembly2(LocalParameters &par) {
             contigs.reserve(300);
 
             // get the aligned positions right so it stays the same for all following procedures and does not to be done anymore:
-
-
-
-
             for (unsigned int idx = 0; idx < alignments.size(); idx++){
                 // now retrieve the other candidate extensions and get their sequences
 
@@ -324,13 +320,12 @@ int doNuclAssembly2(LocalParameters &par) {
                     contigs.push_back(alignments[idx]); 
                 }
             }
-
+            alignments.clear();
 
             if ( contigs.size() > 1){
                 std::string consensus = consensusCaller(contigs, sequenceDbr, querySeq, querySeqLen, queryKey, thread_idx, par, (NucleotideMatrix *) subMat);
                 updateSeqIdConsensus(contigs, sequenceDbr, consensus, querySeq, querySeqLen, queryKey, thread_idx, par, (NucleotideMatrix *) subMat); 
             }
-            alignments.clear();
 
             // std::pair<bool, bool> mgefound = mgeFinderContigs(contigs, sequenceDbr, querySeq, querySeqLen, queryKey, thread_idx, par, (NucleotideMatrix *) subMat);
             // mgeFoundLeft = mgefound.first;
@@ -340,17 +335,20 @@ int doNuclAssembly2(LocalParameters &par) {
             // fill queue
             for (size_t alnIdx = 0; alnIdx < contigs.size(); alnIdx++) {
 
-                if ( contigs[alnIdx].seqId >= par.mergeSeqIdThr && contigs[alnIdx].rySeqId >= par.rySeqIdThr )
-                {
+                unsigned int minAlnLen = 1000;
+                minAlnLen = (contigs[alnIdx].alnLength < minAlnLen) ? std::min(minAlnLen, static_cast<unsigned int>(0.2 * contigs[alnIdx].dbLen)) : minAlnLen;
+
+                if ( contigs[alnIdx].seqId >= par.mergeSeqIdThr && contigs[alnIdx].rySeqId >= par.rySeqIdThr && contigs[alnIdx].alnLength >= minAlnLen){
+                    // if ( contigs[alnIdx].alnLength < 10000 || contigs[alnIdx].seqId >= 0.999 ){
+                        alnQueue.push(contigs[alnIdx]);
+                        if (contigs.size() > 1){
+                            __sync_or_and_fetch(&wasExtended[sequenceDbr->getId(contigs[alnIdx].dbKey)],
+                                                static_cast<unsigned char>(0x40));
+                        }
+                    // }
                     // std::vector<diNucleotideProb> subDeamDiNucRef = contigs[alnIdx].isRevToAlignment ? subDeamDiNucRev : subDeamDiNuc;
                     // float ancientMatches = ancientMatchCount(contigs[alnIdx], querySeq, tSeq, subDeamDiNucRef, nucleotideMap);
                     // contigs[alnIdx].deamMatch = ancientMatches;
-
-                    alnQueue.push(contigs[alnIdx]);
-                    if (contigs.size() > 1){
-                        __sync_or_and_fetch(&wasExtended[sequenceDbr->getId(contigs[alnIdx].dbKey)],
-                                            static_cast<unsigned char>(0x40));
-                    }
                 }
             }
 
@@ -598,9 +596,9 @@ int doNuclAssembly2(LocalParameters &par) {
                     // refill queue
                     //if(tmpAlignments[alnIdx].seqId >= par.mergeSeqIdThr && tmpAlignments[alnIdx].rySeqId >= par.rySeqIdThr){
                     if(tmpAlignments[alnIdx].seqId >= par.mergeSeqIdThr && tmpAlignments[alnIdx].rySeqId >= par.rySeqIdThr){ 
-                        std::vector<diNucleotideProb> subDeamDiNucRef = tmpAlignments[alnIdx].isRevToAlignment ? subDeamDiNucRev : subDeamDiNuc;
-                        float ancientMatches = ancientMatchCount(tmpAlignments[alnIdx], querySeq, tSeq, subDeamDiNucRef, nucleotideMap);
-                        tmpAlignments[alnIdx].deamMatch = ancientMatches;
+                        // std::vector<diNucleotideProb> subDeamDiNucRef = tmpAlignments[alnIdx].isRevToAlignment ? subDeamDiNucRev : subDeamDiNuc;
+                        // float ancientMatches = ancientMatchCount(tmpAlignments[alnIdx], querySeq, tSeq, subDeamDiNucRef, nucleotideMap);
+                        // tmpAlignments[alnIdx].deamMatch = ancientMatches;
                         alnQueue.push(tmpAlignments[alnIdx]);
 
                         size_t tmpDbKey = tmpAlignments[alnIdx].dbKey;

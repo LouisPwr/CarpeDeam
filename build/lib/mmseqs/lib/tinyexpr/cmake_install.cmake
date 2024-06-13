@@ -1,8 +1,8 @@
-# Install script for directory: /vol/cloud/louis/apps/CarpeDeam15/lib/mmseqs/lib/tinyexpr
+# Install script for directory: /vol/cloud/louis/apps/CarpeDeam15.3/lib/mmseqs/lib/tinyexpr
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "/vol/cloud/louis/apps/CarpeDeam15/build")
+  set(CMAKE_INSTALL_PREFIX "/vol/cloud/louis/apps/CarpeDeam15.3/build")
 endif()
 string(REGEX REPLACE "/$" "" CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 
@@ -43,10 +43,10 @@ if(NOT DEFINED CMAKE_OBJDUMP)
 endif()
 
 if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE STATIC_LIBRARY FILES "/vol/cloud/louis/apps/CarpeDeam15/build/lib/mmseqs/lib/tinyexpr/libtinyexpr.a")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE STATIC_LIBRARY FILES "/vol/cloud/louis/apps/CarpeDeam15.3/build/lib/mmseqs/lib/tinyexpr/libtinyexpr.a")
 endif()
 
 if(CMAKE_INSTALL_COMPONENT STREQUAL "Devel" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/include" TYPE FILE FILES "/vol/cloud/louis/apps/CarpeDeam15/lib/mmseqs/lib/tinyexpr/tinyexpr.h")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/include" TYPE FILE FILES "/vol/cloud/louis/apps/CarpeDeam15.3/lib/mmseqs/lib/tinyexpr/tinyexpr.h")
 endif()
 
