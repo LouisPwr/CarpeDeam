@@ -336,7 +336,7 @@ int doNuclAssembly2(LocalParameters &par) {
             for (size_t alnIdx = 0; alnIdx < contigs.size(); alnIdx++) {
 
                 unsigned int minAlnLen = 1000;
-                minAlnLen = (contigs[alnIdx].alnLength < minAlnLen) ? std::min(minAlnLen, static_cast<unsigned int>(0.2 * contigs[alnIdx].dbLen)) : minAlnLen;
+                minAlnLen = (contigs[alnIdx].alnLength < minAlnLen) ? std::min(minAlnLen, static_cast<unsigned int>(0.3 * contigs[alnIdx].dbLen)) : minAlnLen;
 
                 if ( contigs[alnIdx].seqId >= par.mergeSeqIdThr && contigs[alnIdx].rySeqId >= par.rySeqIdThr && contigs[alnIdx].alnLength >= minAlnLen){
                     // if ( contigs[alnIdx].alnLength < 10000 || contigs[alnIdx].seqId >= 0.999 ){

@@ -583,7 +583,7 @@ void compareAndPrintIfDifferent(const diNucleotideProb& vec1, const diNucleotide
 
 
 // Function to calculate the consensus sequence
-std::string calculateConsensus(const std::vector<std::vector<unsigned int>>& queryCov, unsigned int minCoverage = 2) {
+std::string calculateConsensus(const std::vector<std::vector<unsigned int>>& queryCov, unsigned int minCoverage = 5) {
     // Initialize the consensus sequence with 'N's for the full length
     std::string consensus(queryCov.size(), 'N');
 
@@ -710,7 +710,11 @@ std::string consensusCaller(std::vector<Matcher::result_t> & alignments, DBReade
         }
     }
 
-    std::string consensus = calculateConsensus(queryCov);
+    std::string consensus(3*querySeqLen, 'N');
+    
+    if ( !par.ancientUnsafe ){
+        consensus = calculateConsensus(queryCov);
+    }
 
     // replace the query part of the consensus with the query since it is corrected and we trust it more than the consensus
     for (unsigned int qPos = 0; qPos < querySeqLen; qPos++){

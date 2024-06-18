@@ -71,6 +71,7 @@ class LocalParameters : public Parameters {
     int ancientKmerSizeContigs;
     float ancientKmersPerSequenceScale;
     int ancientkmersPerSequence;
+    bool ancientUnsafe;
     float rySeqIdThr;
     
 
@@ -126,6 +127,7 @@ class LocalParameters : public Parameters {
     PARAMETER(PARAM_ANCIENT_KMER_PER_SEQ_SCALE)
     PARAMETER(PARAM_ANCIENT_KMER_PER_SEQ)
     PARAMETER(PARAM_ANCIENT_MIN_RYSEQ_ID)
+    PARAMETER(PARAM_ANCIENT_UNSAFE)
 
    private:
     LocalParameters() : Parameters(),
@@ -180,7 +182,8 @@ class LocalParameters : public Parameters {
                         PARAM_ANCIENT_PARAM_K_CONTIGS(PARAM_ANCIENT_PARAM_K_CONTIGS_ID, "-k-ancient-contigs", "k-mer length contigs (ancient)", "k-mer length contig step (ancient)", typeid(int), (void *) &ancientKmerSizeContigs, "^[0-9]{1}[0-9]*$", MMseqsParameter::COMMAND_EXPERT),
                         PARAM_ANCIENT_KMER_PER_SEQ_SCALE(PARAM_ANCIENT_KMER_PER_SEQ_SCALE_ID, "--kmer-per-seq-scale-ancient", "Scale k-mers per sequence (ancient)", "Scale k-mer per sequence based on sequence length as kmer-per-seq val + scale x seqlen (ancient)", typeid(MultiParam<float>), (void *) &kmersPerSequenceScale, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_EXPERT),
                         PARAM_ANCIENT_KMER_PER_SEQ(PARAM_ANCIENT_KMER_PER_SEQ_ID, "--kmer-per-seq-ancient", "k-mers per sequence (ancient)", "k-mers per sequence (ancient)", typeid(int), (void *) &kmersPerSequence, "^[1-9]{1}[0-9]*$", MMseqsParameter::COMMAND_EXPERT),
-                        PARAM_ANCIENT_MIN_RYSEQ_ID(PARAM_ANCIENT_MIN_RYSEQ_ID_ID, "--min-ryseq-id", "RY-Seq. id. threshold (ancient)", "List matches above this sequence identity in RY-mer space (ancient) (range 0.0-1.0)", typeid(float), (void *) &rySeqIdThr, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_EXPERT)
+                        PARAM_ANCIENT_MIN_RYSEQ_ID(PARAM_ANCIENT_MIN_RYSEQ_ID_ID, "--min-ryseq-id", "RY-Seq. id. threshold (ancient)", "List matches above this sequence identity in RY-mer space (ancient) (range 0.0-1.0)", typeid(float), (void *) &rySeqIdThr, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_EXPERT),
+                        PARAM_ANCIENT_UNSAFE(PARAM_ANCIENT_UNSAFE_ID, "--unsafe", "Maximize contig length", "Maximize the contig length, but higher misassembly rate (ancient) ", typeid(bool), (void *) &ancientUnsafe, "", MMseqsParameter::COMMAND_EXPERT)
                         {
 
         // assembleresult
@@ -286,6 +289,7 @@ class LocalParameters : public Parameters {
         nuclassembleworkflow.push_back(&PARAM_RUNNER);
         nuclassembleworkflow.push_back(&PARAM_NUM_ITERATIONS_READS);
         nuclassembleworkflow.push_back(&PARAM_ANCIENT_MIN_RYSEQ_ID);
+        nuclassembleworkflow.push_back(&PARAM_ANCIENT_UNSAFE);
 
         // guidedassembleresults
         guidedassembleresults.push_back(&PARAM_MIN_SEQ_ID);
@@ -389,6 +393,7 @@ class LocalParameters : public Parameters {
         ancientKmerSizeContigs = 22;
         ancientKmersPerSequenceScale = 0.2;
         ancientkmersPerSequence = 200;
+        ancientUnsafe = false;
         rySeqIdThr = 0.99;
     }
     LocalParameters(LocalParameters const &);
