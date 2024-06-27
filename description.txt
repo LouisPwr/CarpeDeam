@@ -1,0 +1,15 @@
+General:
+- Damage correction
+- 1. round of assembly with reads only --> likelihood model
+- 2. round of assembly with contigs only --> default extension rule
+- NO PROTEIN ASSEMBLY
+- Allow contig-contig extension only once
+
+
+Special parameters:
+--ext-random-align          : likelihood for calculating random alignment; affects threshold of rejecting a candidate extension based on the alignment likelihood
+--min-ryseq-id				: RY-space sequence identity which only applies in default extension but secures that extensions have at least this ry-seq-identity
+--correction-min-ry-seqid	: Uses only reads that align with at least X% ry-seq-identity to avoid spurious alignments to be included in the correction porcess
+--clust-min-ry-seq-id 		: Enables a stricter clustering to ensure at least X% ry-seq-identity in the cluster process 
+--clust-rymer-len			: Should improve the clustering process by using longer ry-mer length in the kmermatcher process since after assembly longer ry-mers can easily be used
+
