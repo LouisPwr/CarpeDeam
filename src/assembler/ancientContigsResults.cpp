@@ -24,29 +24,6 @@
 
 class CompareNuclResultByScoreContigs {
 public:
-    // bool operator() (const Matcher::result_t & r1,const Matcher::result_t & r2) {
-        
-    //     float mm_count1 = r1.alnLength - r1.deamMatch;
-    //     float mm_count2 = r2.alnLength - r2.deamMatch;
-
-    //     float alpha1 = mm_count1 + 1;
-    //     float alpha2 = mm_count2 + 1;
-    //     float beta1 = r1.deamMatch + 1;
-    //     float beta2 = r2.deamMatch + 1;
-
-    //     //double c=(std::tgamma(beta1+beta2)*std::tgamma(alpha1+beta2))/(std::tgamma(alpha1+beta1+beta2)*std::tgamma(beta1));
-    //     double log_c = (std::lgamma(beta1+beta2)+std::lgamma(alpha1+beta1))-(std::lgamma(alpha1+beta1+beta2)+std::lgamma(beta1));
-
-    //     //double r = 1.0; // r_0 =1
-    //     double log_r = 0.0;
-    //     double p = 0.0;
-    //     for (size_t idx = 0; idx < alpha2; idx++) {
-
-    //         p += exp(log_r + log_c);
-    //         //r *= ((alpha1+idx)*(beta2+idx))/((idx+1)*(idx+alpha1+beta1+beta2));
-    //         log_r = log(alpha1+idx)+log(beta2+idx)-(log(idx+1) + log(idx+alpha1+beta1+beta2)) + log_r;
-    //     }
-
     bool operator() (const Matcher::result_t & r1,const Matcher::result_t & r2) {
         // unsigned int mm_count1 = (1 - r1.seqId) * r1.alnLength + 0.5;
         // unsigned int mm_count2 = (1 - r2.seqId) * r2.alnLength + 0.5;
@@ -63,25 +40,6 @@ public:
         float alpha2 = mm_count2 + 1;
         float beta1 = r1.deamMatch + 1;
         float beta2 = r2.deamMatch + 1;
-
-        // #pragma omp critical
-        // {
-        // // Print the values for r1
-        // std::cerr << "r1.dbkey: " << r1.dbKey << std::endl;
-        // std::cerr << "r1.alnLength: " << r1.alnLength << std::endl;
-        // std::cerr << "r1.seqId: " << r1.seqId << std::endl;
-        // std::cerr << "r1.rySeqId: " << r1.rySeqId << std::endl;
-        // std::cerr << "r1.deamMatch: " << r1.deamMatch << std::endl;
-        // std::cerr << "mm_count1: " << mm_count1 << std::endl;
-
-        // // Print the values for r2
-        // std::cerr << "r2.dbkey: " << r2.dbKey << std::endl;
-        // std::cerr << "r2.alnLength: " << r2.alnLength << std::endl;
-        // std::cerr << "r2.seqId: " << r2.seqId << std::endl;
-        // std::cerr << "r2.rySeqId: " << r2.rySeqId << std::endl;
-        // std::cerr << "r2.deamMatch: " << r2.deamMatch << std::endl;
-        // std::cerr << "mm_count2: " << mm_count2 << std::endl;
-        // }
 
         //double c=(std::tgamma(beta1+beta2)*std::tgamma(alpha1+beta2))/(std::tgamma(alpha1+beta1+beta2)*std::tgamma(beta1));
         double log_c = (std::lgamma(beta1+beta2)+std::lgamma(alpha1+beta1))-(std::lgamma(alpha1+beta1+beta2)+std::lgamma(beta1));
@@ -101,50 +59,11 @@ public:
             return true;
         if (p  > 0.55)
             return false;
-        // if ( r1.alnLength > 200 && r2.alnLength > 200 ){
-        //     if ( r1.seqId > r2.seqId ){
-        //         return false;
-        //     }
-        //     if ( r2.seqId > r1.seqId ){
-        //         return true;
-        //     }
-        // }
         if (r1.alnLengthCons < r2.alnLengthCons)
             return true;
         if (r1.alnLengthCons > r2.alnLengthCons)
             return false;
         // before simply longer alignment
-
-
-        // if ( r1.dbLen < 200 || r2.dbLen < 200 ){
-        //     if (r1.alnLength < r2.alnLength)
-        //         return true;
-        //     if (r1.alnLength > r2.alnLength)
-        //         return false;
-        //     if ( r1.seqId > r2.seqId ){
-        //         return false;
-        //     }
-        //     if ( r2.seqId > r1.seqId ){
-        //         return true;
-        //     }
-        // }
-        // if ( r1.seqId > r2.seqId ){
-        //     return false;
-        // }
-        // if ( r2.seqId > r1.seqId ){
-        //     return true;
-        // }
-        // if (r1.alnLength > r2.alnLength)
-        //     return false;
-        // if (r1.alnLength < r2.alnLength)
-        //     return true;
-
-
-
-        // if (r1.dbLen < r2.dbLen)
-        //     return true;
-        // if (r1.dbLen > r2.dbLen)
-        //     return false;
 
         return true;
     }
@@ -203,24 +122,6 @@ int doNuclAssembly2(LocalParameters &par) {
     std::string high5 = userInput + "5p.prof";
     std::string high3 = userInput + "3p.prof";
 
-#ifdef DEBUGCOV
-    auto currentTime = std::chrono::system_clock::now();
-    std::time_t time = std::chrono::system_clock::to_time_t(currentTime);
-
-    std::stringstream one;
-    one << "all_candidates_" << time << ".tsv";
-    std::string filenameOne = one.str();
-    std::ofstream outputFileAll;  // Declare the ofstream object globally if possible
-    outputFileAll.open(filenameOne, std::ios::app);  // Open once, append mode
-
-    std::stringstream two;
-    two << "ext_candidates_" << time << ".tsv";
-    std::string filenameTwo = two.str();
-    std::ofstream outputFileExt;  // Declare the ofstream object globally if possible
-    outputFileExt.open(filenameTwo, std::ios::app);  // Open once, append mode
-
-#endif
-
 
 #pragma omp parallel
     {
@@ -261,21 +162,9 @@ int doNuclAssembly2(LocalParameters &par) {
         long double seqErrCorrection= 0.01;
         getSeqErrorProf(seqErrMatch, seqErrCorrection);
 
-// #ifdef DEBUGCOV
-//         // debugging coverage
-//         //std::vector<std::vector<double>> allCovsDebug;
-//         // std::vector<std::vector<double>> besthitCoverages; 
-// #endif
-
-
 #pragma omp for schedule(dynamic, 100)
         for (size_t id = 0; id < sequenceDbr->getSize(); id++) {
             progress.updateProgress();
-
-// #ifdef DEBUGCOV
-//             //debugging coverage
-//             std::vector<double> dbCovs;
-// #endif
 
             unsigned int queryKey = sequenceDbr->getDbKey(id);
             char *querySeq = sequenceDbr->getData(id, thread_idx);
@@ -353,7 +242,7 @@ int doNuclAssembly2(LocalParameters &par) {
             std::string consensus(3*querySeqLen, 'N');
             // if ( contigs.size() > 1){
             consensusCaller(consensus, contigs, sequenceDbr, querySeq, querySeqLen, queryKey, thread_idx, par, (NucleotideMatrix *) subMat);
-            updateSeqIdConsensus(contigs, sequenceDbr, consensus, querySeq, querySeqLen, queryKey, thread_idx, par, (NucleotideMatrix *) subMat); 
+            updateSeqIdConsensus(contigs, sequenceDbr, consensus, querySeqLen, thread_idx, (NucleotideMatrix *) subMat); 
             // }
 
             // std::pair<bool, bool> mgefound = mgeFinderContigs(contigs, sequenceDbr, querySeq, querySeqLen, queryKey, thread_idx, par, (NucleotideMatrix *) subMat);
@@ -374,20 +263,8 @@ int doNuclAssembly2(LocalParameters &par) {
                     // if ( contigs[alnIdx].alnLength < 10000 || contigs[alnIdx].seqId >= 0.999 ){
                         std::vector<diNucleotideProb> subDeamDiNucRef = contigs[alnIdx].isRevToAlignment ? subDeamDiNucRev : subDeamDiNuc;
                         
-                        float ancientMatches = ancientMatchCount(contigs[alnIdx], consensus, querySeqLen, subDeamDiNucRef, sequenceDbr, thread_idx, (NucleotideMatrix *) subMat, querySeq, lefts, rights, others);
+                        float ancientMatches = ancientMatchCount(contigs[alnIdx], consensus, querySeqLen, subDeamDiNucRef, sequenceDbr, thread_idx, (NucleotideMatrix *) subMat, lefts, rights, others);
                         contigs[alnIdx].deamMatch = ancientMatches;
-
-                        // #pragma omp critical
-                        // {
-                        //     if (contigs[alnIdx].seqId < 1){
-                        //     std::cerr <<  "contigs[alnIdx].dbKey\t" <<  contigs[alnIdx].dbKey << std::endl;
-                        //     std::cerr <<  "contigs[alnIdx].alnLength\t" <<  contigs[alnIdx].alnLength << std::endl;
-                        //     std::cerr <<  "contigs[alnIdx].alnLengthCons\t" <<  contigs[alnIdx].alnLengthCons << std::endl;
-                        //     std::cerr <<  "contigs[alnIdx].seqId\t" <<  contigs[alnIdx].seqId << std::endl;
-                        //     std::cerr <<  "contigs[alnIdx].rySeqId\t" <<  contigs[alnIdx].rySeqId << std::endl;
-                        //     std::cerr <<  "contigs[alnIdx].deamMatch\t" <<  contigs[alnIdx].deamMatch << std::endl;   
-                        //     }
-                        // }
                         
                         alnQueue.push(contigs[alnIdx]);
                         if (contigs.size() > 1){
@@ -397,15 +274,6 @@ int doNuclAssembly2(LocalParameters &par) {
                     // }
                 }
             }
-
-            // #pragma omp critical
-            // {
-            //     if ( lefts >0 || rights >0 || others >0){
-            // std::cerr << "lefts\t" << lefts << std::endl;
-            // std::cerr << "rights\t" << rights << std::endl;
-            // std::cerr << "otherss\t" << others << std::endl;
-            //     }
-            // }
 
             // Extension process begins here
             std::vector<Matcher::result_t> tmpAlignments;
@@ -454,31 +322,6 @@ int doNuclAssembly2(LocalParameters &par) {
                     unsigned int qEndPos = besttHitToExtend.qEndPos;
 
 
-#ifdef DEBUGCOV
-                    std::string targetPrintAll(targetSeq, targetSeqLen); 
-                    std::string outputLineAll = std::to_string(queryKey) + "\t" +
-                                                std::to_string(besttHitToExtend.alnLength) + "\t" +
-                                                std::to_string(querySeqLen) + "\t" +
-                                                std::to_string(besttHitToExtend.dbLen) + "\t" +
-                                                std::to_string(besttHitToExtend.seqId) + "\t" +
-                                                std::to_string(besttHitToExtend.rySeqId) + "\t" +
-                                                "2\t" +  // Assuming this is a constant value
-                                                std::to_string(query.length()) + "\t" +
-                                                std::to_string(besttHitToExtend.qStartPos) + "\t" + 
-                                                std::to_string(besttHitToExtend.qEndPos) + "\t" + 
-                                                std::to_string(besttHitToExtend.dbStartPos) + "\t" + 
-                                                std::to_string(besttHitToExtend.dbEndPos) + "\t" + 
-                                                query + "\t" +
-                                                targetPrintAll + "\t\n";
-
-                        #pragma omp critical
-                        {
-                            if (outputFileAll.is_open()) {
-                                outputFileAll << outputLineAll;
-                            }
-                        }
-#endif
-
                     bool solidRightExt = true; // !(countRightExt == 1 && besttHitToExtend.alnLength <= 100);
                     bool solidLeftExt = true; //!(countLeftExt == 1 && besttHitToExtend.alnLength <= 100);
 
@@ -507,41 +350,8 @@ int doNuclAssembly2(LocalParameters &par) {
                         else
                            fragment = std::string(targetSeq + dbEndPos + 1, fragLen);
 
-#ifdef DEBUGCOV
-                        bool wasReverse = useReverse[targetId];
-                        std::string queryOld = query;
-                        std::string result = query + fragment;
-#endif
-
                         query += fragment;
                         rightQueryOffset += fragLen;
-
-#ifdef DEBUGCOV
-                    #pragma omp critical
-                    {
-                    std::string targetPrint(targetSeq, targetSeqLen); 
-                    std::string outputLine = std::to_string(queryKey) + "\t" +
-                                                std::to_string(besttHitToExtend.alnLength) + "\t" +
-                                                std::to_string(querySeqLen) + "\t" +
-                                                std::to_string(besttHitToExtend.dbLen) + "\t" +
-                                                std::to_string(besttHitToExtend.seqId) + "\t" +
-                                                std::to_string(besttHitToExtend.rySeqId) + "\t" +
-                                                "1\t" +  // Assuming this is a constant value
-                                                std::to_string(query.length()) + "\t" +
-                                                std::to_string(besttHitToExtend.qStartPos) + "\t" + 
-                                                std::to_string(besttHitToExtend.qEndPos) + "\t" + 
-                                                std::to_string(besttHitToExtend.dbStartPos) + "\t" + 
-                                                std::to_string(besttHitToExtend.dbEndPos) + "\t" + 
-                                                std::to_string(wasReverse) + "\t" + 
-                                                queryOld + "\t" +
-                                                targetPrint + "\t" +
-                                                result + "\t\n";
-
-                        if (outputFileExt.is_open()) {
-                            outputFileExt << outputLine;
-                        }
-                    }
-#endif
 
                     //update that dbKey was used in assembly
                     __sync_or_and_fetch(&wasExtended[targetId], static_cast<unsigned char>(0x80));
@@ -570,42 +380,10 @@ int doNuclAssembly2(LocalParameters &par) {
                         else
                             fragment = std::string(targetSeq, fragLen);
 
-#ifdef DEBUGCOV
-                        bool wasReverse = useReverse[targetId];
-                        std::string queryOld = query;
-                        std::string result = query + fragment;
-#endif
 
                         query = fragment + query;
                         leftQueryOffset += fragLen;
 
-#ifdef DEBUGCOV
-                    #pragma omp critical
-                    {
-                    std::string targetPrint(targetSeq, targetSeqLen); 
-                    std::string outputLine = std::to_string(queryKey) + "\t" +
-                                                std::to_string(besttHitToExtend.alnLength) + "\t" +
-                                                std::to_string(querySeqLen) + "\t" +
-                                                std::to_string(besttHitToExtend.dbLen) + "\t" +
-                                                std::to_string(besttHitToExtend.seqId) + "\t" +
-                                                std::to_string(besttHitToExtend.rySeqId) + "\t" +
-                                                "0\t" +  // Assuming this is a constant value
-                                                std::to_string(query.length()) + "\t" +
-                                                std::to_string(besttHitToExtend.qStartPos) + "\t" + 
-                                                std::to_string(besttHitToExtend.qEndPos) + "\t" + 
-                                                std::to_string(besttHitToExtend.dbStartPos) + "\t" + 
-                                                std::to_string(besttHitToExtend.dbEndPos) + "\t" + 
-                                                std::to_string(wasReverse) + "\t" + 
-                                                queryOld + "\t" +
-                                                targetPrint + "\t" +
-                                                result + "\t\n";
-
-
-                        if (outputFileExt.is_open()) {
-                            outputFileExt << outputLine;
-                        }
-                    }
-#endif
                         //update that dbKey was used in assembly
                         __sync_or_and_fetch(&wasExtended[targetId], static_cast<unsigned char>(0x80));
                     }
@@ -647,7 +425,6 @@ int doNuclAssembly2(LocalParameters &par) {
                     tmpAlignments[alnIdx].rySeqId = ryId;
 
                     // refill queue
-                    //if(tmpAlignments[alnIdx].seqId >= par.mergeSeqIdThr && tmpAlignments[alnIdx].rySeqId >= par.rySeqIdThr){
                     if(tmpAlignments[alnIdx].seqId >= par.mergeSeqIdThr && tmpAlignments[alnIdx].rySeqId >= par.rySeqIdThr){ 
                         // std::vector<diNucleotideProb> subDeamDiNucRef = tmpAlignments[alnIdx].isRevToAlignment ? subDeamDiNucRev : subDeamDiNuc;
                         // float ancientMatches = ancientMatchCount(contigs[alnIdx], consensus, querySeqLen, subDeamDiNucRef, sequenceDbr, thread_idx, (NucleotideMatrix *) subMat, querySeq);

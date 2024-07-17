@@ -130,9 +130,9 @@ void calcLikelihoodConsensus(scorePerRes & scoredRes, std::string & consensus, c
 
 void consensusCaller(std::string & consensus, std::vector<Matcher::result_t> & alignments, DBReader<unsigned int>* sequenceDbr, char *querySeq, const unsigned int querySeqLen, unsigned int queryKey, unsigned int thread_idx, LocalParameters &par, NucleotideMatrix *subMat);
 
-void updateSeqIdConsensus(std::vector<Matcher::result_t> & alignments, DBReader<unsigned int>* sequenceDbr, std::string & consensus, char *querySeq, const unsigned int querySeqLen, unsigned int queryKey, unsigned int thread_idx, LocalParameters &par, NucleotideMatrix *subMat);
+void updateSeqIdConsensus(std::vector<Matcher::result_t> & alignments, DBReader<unsigned int>* sequenceDbr, std::string & consensus, const unsigned int querySeqLen, unsigned int thread_idx, NucleotideMatrix *subMat);
 
-void updateSeqIdConsensusReads(std::vector<Matcher::result_t> & alignments, DBReader<unsigned int>* sequenceDbr, std::string & consensus, char *querySeq, const unsigned int querySeqLen, unsigned int queryKey, unsigned int thread_idx, LocalParameters &par, NucleotideMatrix *subMat, unsigned int & maxAlnLeft, unsigned int & maxRight);
+void updateSeqIdConsensusReads(std::vector<Matcher::result_t> & alignments, DBReader<unsigned int>* sequenceDbr, std::string & consensus, const unsigned int querySeqLen, unsigned int thread_idx, NucleotideMatrix *subMat, unsigned int & maxAlnLeft, unsigned int & maxAlnRight);
 
 //bool calcLikelihoodCorrection(Matcher::result_t rightLongestCandi, Matcher::result_t candidate, std::string querySeq, std::string targetSeq, std::vector<diNucleotideProb> & subDeamDiNuc, diNucleotideProb & seqErrMatch, bool extSide);
 std::vector<long double> calcLikelihoodCorrection(const Matcher::result_t & rightLongestCandi, const Matcher::result_t & candidate, const std::string & querySeq, const std::string & targetSeq, const std::vector<diNucleotideProb> & subDeamDiNuc, const diNucleotideProb & seqErrMatch, bool extSide);
@@ -147,7 +147,7 @@ int doNuclAssembly2(LocalParameters &par);
 
 double deamMatches(Matcher::result_t res, int qBase, int tBase, unsigned int pos, unsigned int scoreAln, double matchLik);
 
-float ancientMatchCount(Matcher::result_t & res, std::string & consensus, const unsigned int querySeqLen, std::vector<diNucleotideProb> &subDeamDiNuc, DBReader<unsigned int>* sequenceDbr, unsigned int thread_idx, NucleotideMatrix *subMat, char *querySeq, unsigned int & lefts, unsigned int & rights, unsigned int & others);
+float ancientMatchCount(Matcher::result_t & res, std::string & consensus, const unsigned int querySeqLen, std::vector<diNucleotideProb> &subDeamDiNuc, DBReader<unsigned int>* sequenceDbr, unsigned int thread_idx, NucleotideMatrix *subMat, unsigned int & lefts, unsigned int & rights, unsigned int & others);
 
 // float ancientMatchCountContig(Matcher::result_t res, char* querySeq, char* targetSeq, std::vector<diNucleotideProb> &subDeamDiNuc, std::unordered_map<char, int> &nucleotideMap);
 

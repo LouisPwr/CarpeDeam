@@ -1,16 +1,18 @@
-#include "CommandCaller.h"
 #include "DBReader.h"
+#include "Util.h"
+#include "CommandCaller.h"
 #include "Debug.h"
 #include "FileUtil.h"
 #include "LocalParameters.h"
-#include "Util.h"
+
 #include "guidedNuclAssemble.sh.h"
 
 void setGuidedNuclAssemblerWorkflowDefaults(LocalParameters *p) {
-    p->multiNumIterations = MultiParam<int>(5, 5);
-    p->multiKmerSize = MultiParam<int>(14, 22);
-    p->multiSeqIdThr = MultiParam<float>(0.97, 0.99);
-    p->alphabetSize = MultiParam<int>(13, 5);
+
+    p->multiNumIterations = MultiParam<int>(5,5);
+    p->multiKmerSize = MultiParam<int>(14,22);
+    p->multiSeqIdThr = MultiParam<float>(0.97,0.99);
+    p->alphabetSize = MultiParam<int>(13,5);
 
     p->orfMinLength = 45;
     p->covThr = 0.00;
@@ -28,7 +30,7 @@ void setGuidedNuclAssemblerWorkflowDefaults(LocalParameters *p) {
     p->cycleCheck = true;
     p->chopCycle = true;
 
-    // cluster defaults for redundancy reduction
+    //cluster defaults for redundancy reduction
     p->covMode = 1;
     p->clustSeqIdThr = 0.97;
     p->clustCovThr = 0.99;
@@ -36,7 +38,6 @@ void setGuidedNuclAssemblerWorkflowDefaults(LocalParameters *p) {
     p->gapOpen = 5;
     p->gapExtend = 2;
     p->zdrop = 200;
-    
 }
 
 int guidedNuclAssemble(int argc, const char **argv, const Command &command) {
@@ -50,7 +51,7 @@ int guidedNuclAssemble(int argc, const char **argv, const Command &command) {
     par.overrideParameterDescription(par.PARAM_ZDROP, "Maximal allowed difference between score values before alignment is truncated (only for clustering)", NULL, 0);
 
     // make parameter visible in short help
-    par.overrideParameterDescription(par.PARAM_MAX_SEQ_LEN, NULL, NULL, MMseqsParameter::COMMAND_COMMON);
+    par.overrideParameterDescription( par.PARAM_MAX_SEQ_LEN, NULL, NULL, MMseqsParameter::COMMAND_COMMON);
 
     // hide this parameters (changing them would lead to unexpected behavior)
     par.PARAM_C.replaceCategory(MMseqsParameter::COMMAND_HIDDEN);
@@ -81,11 +82,12 @@ int guidedNuclAssemble(int argc, const char **argv, const Command &command) {
 
     par.parseParameters(argc, argv, command, true, Parameters::PARSE_VARIADIC, 0);
     CommandCaller cmd;
-    if (par.filenames.size() < 3) {
+    if(par.filenames.size() < 3) {
         Debug(Debug::ERROR) << "Too few input files provided.\n";
         return EXIT_FAILURE;
-    } else if ((par.filenames.size() - 2) % 2 == 0) {
-        cmd.addVariable("PAIRED_END", "1");  // paired end reads
+    }
+    else if ((par.filenames.size() - 2) % 2 == 0) {
+        cmd.addVariable("PAIRED_END", "1"); // paired end reads
     } else {
         if (par.filenames.size() != 3) {
             Debug(Debug::ERROR) << "Too many input files provided.\n";
@@ -93,8 +95,9 @@ int guidedNuclAssemble(int argc, const char **argv, const Command &command) {
             Debug(Debug::ERROR) << "For single input use READSET.fast(q|a) OUTPUT.fasta tmpDir\n";
             return EXIT_FAILURE;
         }
-        cmd.addVariable("PAIRED_END", NULL);  // single end reads
+        cmd.addVariable("PAIRED_END", NULL); // single end reads
     }
+
 
     std::string tmpDir = par.filenames.back();
     std::string hash = SSTR(par.hashParameter(command.databases, par.filenames, *command.params));
@@ -117,16 +120,13 @@ int guidedNuclAssemble(int argc, const char **argv, const Command &command) {
 
     cmd.addVariable("REMOVE_TMP", par.removeTmpFiles ? "TRUE" : NULL);
     cmd.addVariable("REMOVE_INCREMENTAL_TMP", par.deleteFilesInc ? "TRUE" : NULL);
-    cmd.addVariable("USE_PREFILTER", par.usePrefilter ? "TRUE" : NULL);
     cmd.addVariable("RUNNER", par.runner.c_str());
+
     // set values for protein level assembly
     par.numIterations = par.multiNumIterations.aminoacids;
     par.kmerSize = par.multiKmerSize.aminoacids;
     par.seqIdThr = par.multiSeqIdThr.aminoacids;
     par.alnLenThr = par.multiAlnLenThr.aminoacids;
-    par.spacedKmer = par.multiSpacedKmer.aminoacids;
-    par.spacedKmerPattern = par.multiSpacedKmerPattern.aminoacids;
-    cmd.addVariable("PREF_NUM_IT", SSTR(par.prefilterNumIterations).c_str());
     cmd.addVariable("NUM_IT", SSTR(par.numIterations).c_str());
 
     // # 0. Extract ORFs
@@ -150,7 +150,6 @@ int guidedNuclAssemble(int argc, const char **argv, const Command &command) {
     par.includeOnlyExtendable = true;
 
     // # 1. Finding exact $k$-mer matches.
-        
     cmd.addVariable("KMERMATCHER_PAR", par.createParameterString(par.kmermatcher).c_str());
 
     // # 2. Rescore diagonal
@@ -158,6 +157,8 @@ int guidedNuclAssemble(int argc, const char **argv, const Command &command) {
     bool addBacktrace = par.addBacktrace;
     par.addBacktrace = true;
     cmd.addVariable("UNGAPPED_ALN_PAR", par.createParameterString(par.rescorediagonal).c_str());
+    cmd.addVariable("PROTEIN_ALN_2_NUCL_PAR", par.createParameterString(par.proteinaln2nucl).c_str());
+
 
     // # 3. Assembly: Extend by left and right extension
     par.seqIdThr = par.multiSeqIdThr.nucleotides;
@@ -168,15 +169,12 @@ int guidedNuclAssemble(int argc, const char **argv, const Command &command) {
     par.kmerSize = par.multiKmerSize.nucleotides;
     par.seqIdThr = par.multiSeqIdThr.nucleotides;
     par.alnLenThr = par.multiAlnLenThr.nucleotides;
-    par.spacedKmer = par.multiSpacedKmer.nucleotides;
-    par.spacedKmerPattern = par.multiSpacedKmerPattern.nucleotides;
     par.addBacktrace = addBacktrace;
     par.dbMode = true;
     cmd.addVariable("NUCL_ASM_PAR", par.createParameterString(par.nuclassembleworkflow).c_str());
 
     // set mandatory values for redundancy reduction
     par.seqIdThr = par.clustSeqIdThr;
-    // par.kmerSize = par.kmer;
     par.covThr = par.clustCovThr;
     par.wrappedScoring = true;
     par.ignoreMultiKmer = true;
@@ -184,19 +182,6 @@ int guidedNuclAssemble(int argc, const char **argv, const Command &command) {
 
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("VERBOSITY_PAR", par.createParameterString(par.onlyverbosity).c_str());
-
-    if (par.usePrefilter == 1) {
-        par.scoringMatrixFile = par.prefilterScoringMatrixFile;
-        par.spacedKmer = par.prefilterSpacedKmer;
-        par.spacedKmerPattern = par.prefilterSpacedKmerPattern;
-        par.kmerSize = par.prefilterKmerSize;
-        par.sensitivity = par.prefilterSensitivity;
-        par.exactKmerMatching = par.prefilterExactKmerMatching;
-        par.maskMode = par.prefilterMaskMode;
-        par.compBiasCorrection = par.prefilterCompBiasCorrection;
-        par.maxResListLen = par.prefilterMaxResListLen;
-        cmd.addVariable("PREFILTER_PAR", par.createParameterString(par.prefilter).c_str());
-    }
 
     FileUtil::writeFile(tmpDir + "/guidedNuclAssemble.sh", guidedNuclAssemble_sh, guidedNuclAssemble_sh_len);
     std::string program(tmpDir + "/guidedNuclAssemble.sh");

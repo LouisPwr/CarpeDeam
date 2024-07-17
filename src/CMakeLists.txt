@@ -5,17 +5,17 @@ add_subdirectory(version)
 add_subdirectory(workflow)
 add_subdirectory(util)
 
-add_executable(plass
+add_executable(carpedeam
         ${commons_source_files}
-        ${assembler_source_files}
-        ${workflow_source_files}
+        ${carpedeam_assembler_source_files}
+        ${carpedeam_workflow_source_files}
         ${util_source_files}
         LocalCommandDeclarations.h
-        plass.cpp
+        carpedeam.cpp
         )
-mmseqs_setup_derived_target(plass)
-target_link_libraries(plass version kerasify flash)
+mmseqs_setup_derived_target(carpedeam)
+target_link_libraries(carpedeam version kerasify flash)
 
-add_dependencies(plass local-generated)
+add_dependencies(carpedeam local-generated)
 
-install(TARGETS plass DESTINATION bin)
+install(TARGETS carpedeam DESTINATION bin)

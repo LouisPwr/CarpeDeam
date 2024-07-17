@@ -140,8 +140,8 @@ int nuclassemble(int argc, const char **argv, const Command &command) {
     // Louis was here
     cmd.addVariable("RANDOM_ALN_PENAL", SSTR(par.randomAlignPenal).c_str());
     cmd.addVariable("PARAM_EXCESS_PENAL", SSTR(par.excessPenal).c_str());
-    cmd.addVariable("CORRECTION_THRESHOLD", SSTR(par.correctionThresholdRySeqId).c_str());
-    cmd.addVariable("CORRECTION_THRESHOLD_SEQID", SSTR(par.correctionThresholdSeqId).c_str());
+    cmd.addVariable("CORRECTION_THRESHOLD", SSTR(par.corrReadsRySeqId).c_str());
+    cmd.addVariable("CORRECTION_THRESHOLD_SEQID", SSTR(par.corrReadsSeqId).c_str());
     cmd.addVariable("LIKELIHOOD_THRESHOLD", SSTR(par.likelihoodThreshold).c_str());
     cmd.addVariable("SEQ_ID_MERGE_THRESH", SSTR(par.mergeSeqIdThr).c_str());
     cmd.addVariable("SEQ_ID_THRESH_CORR_CONTIG", SSTR(par.corrContigSeqId).c_str());

@@ -106,12 +106,6 @@ int mostLikeliBaseRead(const int baseInQuery, const unsigned int qIter, const st
                 double logDeamPattern = std::log(deamPattern);
                 double logDeamPatternRev = std::log(deamPatternRev);
 
-                // qBaseLik += (covDeam - numReverse) * (logQBaseErr[qBase] + logDeamPattern);
-                // qBaseLik += numReverse * (logQBaseErr[qBase] + logDeamPatternRev);
-                // if (covDeam != 0) {
-                //     qBaseLik += (covDeam - numReverse) * (logTBaseErr[tBase] + logQBaseErr[qBase] + logDeamPattern);
-                //     qBaseLik += numReverse * (logTBaseErr[tBase] +  logQBaseErr[qBase] + logDeamPatternRev);
-                // }
                 if (covDeam != 0) {
                     qBaseLik += (covDeam - numReverse) * (logTBaseErr[tBase] + logQBaseErr[qBase] + logDeamPattern);
                     qBaseLik += numReverse * (logTBaseErr[tBase] +  logQBaseErr[qBase] + logDeamPatternRev);
@@ -124,15 +118,6 @@ int mostLikeliBaseRead(const int baseInQuery, const unsigned int qIter, const st
 
     auto maxLik = std::max_element(baseLikelis.begin(), baseLikelis.end());
     int idxMax = std::distance(baseLikelis.begin(), maxLik);
-
-    // for (int i = 0; i<4; i++)
-    // {
-    //    std::cerr << "Base:\t" << i << "\tLikeli\t" << baseLikelis[i] << std::endl;
-    // }
-    
-    // std::cerr << "IdMax:\t" << idxMax << std::endl;
-    // std::cerr << "baseInQuery\t" << baseInQuery << std::endl;
-    // std::cerr << '\n' << std::endl;
 
     return idxMax;
 }
@@ -169,24 +154,6 @@ int doCorrection(LocalParameters &par) {
     
     std::string high5 = userInput + "5p.prof";
     std::string high3 = userInput + "3p.prof";
-
-#ifdef DEBUGCORR
-    auto currentTime = std::chrono::system_clock::now();
-    std::time_t time = std::chrono::system_clock::to_time_t(currentTime);
-
-    std::stringstream one;
-    one << "coverages_" << time << ".tsv";
-    std::string filenameOne = one.str();
-    std::ofstream outputFileAll;  // Declare the ofstream object globally if possible
-    outputFileAll.open(filenameOne, std::ios::app);  // Open once, append mode
-
-    std::stringstream two;
-    two << "overlaps_" << time << ".tsv";
-    std::string filenameTwo = two.str();
-    std::ofstream outputFileOver;  // Declare the ofstream object globally if possible
-    outputFileOver.open(filenameTwo, std::ios::app);  // Open once, append mode
-
-#endif
 
 #pragma omp parallel
     {
@@ -299,12 +266,6 @@ int doCorrection(LocalParameters &par) {
                 }
             }
 
-
-            // if ( queryKey == 4631784 ){
-            //     std::cerr << "mge found left?:\t" << mgeFoundLeft << std::endl;
-            //     std::cerr << "mge found right?:\t" << mgeFoundRight << std::endl;
-            // }
-
             // choose only reads
             std::vector<Matcher::result_t> reads;
             reads.reserve(300);
@@ -333,62 +294,11 @@ int doCorrection(LocalParameters &par) {
                 float ryId = getRYSeqId(targetRead, querySeq,  tSeq, ryMap);
                 targetRead.rySeqId = ryId;
 
-                float rymerThresh = par.correctionThresholdRySeqId;
-                //float rymerThresh = 0.95;
+                float rymerThresh = par.corrReadsRySeqId;
                 if ( targetRead.alnLength <= 100){
                     rymerThresh = (static_cast<float>(targetRead.alnLength) - 1) / static_cast<float>(targetRead.alnLength);
                     rymerThresh = std::floor(rymerThresh * 1000) / 1000;
                 }
-
-
-#ifdef DEBUGCORR2
-                if ( queryKey == 4631784 ){
-                // DEBUG CORRECTION
-                    #pragma omp critical
-                    {
-                        std::string targetOverlap;
-                        for ( int i = targetRead.dbStartPos; i <= targetRead.dbEndPos; i++ )
-                        {
-                            targetOverlap += tSeq[i];
-                        }
-                        std::string targetAligned(querySeqLen, '-');
-                        // Insert the overlapping region
-                        for (int i = targetRead.qStartPos, k = 0; i <= targetRead.qEndPos; i++, k++) {
-                            targetAligned[i] = targetOverlap[k];
-                        }
-                        // Print the target aligned sequence with an appropriate label
-                        //std::cerr << targetAligned << "\t" << targetRead.dbKey << std::endl;
-
-                        // if ( queryKey == 4631784 ){
-                        //     std::cerr << ">" << targetRead.dbKey << "_" << tId << std::endl;
-                        //     std::cerr << tSeq << std::endl;
-                        // }
-
-                        // Append the loop output to outputLine
-                        targetAligned += "\t";
-                        targetAligned += std::to_string(targetRead.dbKey);
-                        targetAligned += "\t";
-                        targetAligned += std::to_string(targetRead.seqId);
-                        targetAligned += "\t";
-                        // targetAligned += std::to_string(insideSeqId);
-                        // targetAligned += "\t";
-                        targetAligned += std::to_string(targetRead.rySeqId);
-                        targetAligned += "\t";
-                        targetAligned += std::to_string(rymerThresh);
-                        targetAligned += "\t";
-                        targetAligned += std::to_string(mgeFoundRight);
-                        targetAligned += "\t";
-                        targetAligned += std::to_string(mgeFoundLeft);
-                        targetAligned += "\t";
-                        targetAligned += std::to_string(alignments.size());
-                        targetAligned += "\n";
-
-                        if (outputFileOver.is_open()) {
-                            outputFileOver << targetAligned;
-                        }
-                    }
-                }
-#endif
 
                 if (deleteTargetSeq) {
                     delete[] tSeq;
@@ -440,16 +350,12 @@ int doCorrection(LocalParameters &par) {
                 float ryId = getRYSeqId(target, querySeq,  tSeq, ryMap);
                 target.rySeqId = ryId;
 
-                float rymerThresh = par.correctionThresholdRySeqId;
-                //float rymerThresh = 0.95;
+                float rymerThresh = par.corrReadsRySeqId;
                 if ( target.alnLength <= 100){
                     rymerThresh = (static_cast<float>(target.alnLength) - 1) / static_cast<float>(target.alnLength);
                     rymerThresh = std::floor(rymerThresh * 1000) / 1000;
                 }
 
-                //if ( targetWasExt == false && isNotIdentity && target.rySeqId >= rymerThresh && target.seqId >= par.seqIdThr && target.alnLength >= 30 && ){
-                //if ( targetWasExt == false && target.rySeqId >= rymerThresh && target.seqId >= par.seqIdThr && target.alnLength >= 30 ) {
-                //auto startVec = std::chrono::high_resolution_clock::now();
                 if ( target.rySeqId >= rymerThresh && target.seqId >= par.seqIdThr && target.alnLength >= 30 ) {
 
                     std::vector<int> subdeam_index(target.dbLen);
@@ -478,9 +384,6 @@ int doCorrection(LocalParameters &par) {
                         revCount[posInQuery].count[targetBase][deamT] += target.isRevToAlignment;
                     }
                 }
-                //auto endVec = std::chrono::high_resolution_clock::now();
-                //std::chrono::duration<double, std::milli> elapsed = endVec - startVec;
-                //std::cerr << "Elapsed time Vector: " << elapsed.count() << " ms" << std::endl;
 
                 if ( deleteTargetSeq )
                     {
@@ -554,10 +457,6 @@ int doCorrection(LocalParameters &par) {
                     int newBase = qBase;
                     int newBaseCandidate = mostLikeliBaseRead(qBase, qPos, deamVec, revCount, subDeamDiNuc, subDeamDiNucRev, seqErrMatch, qWasExtended, querySeqLen);
                     newBase = newBaseCandidate;
-                //auto endLikeli = std::chrono::high_resolution_clock::now();
-                // std::chrono::duration<double, std::milli> elapsed = endLikeli - startLikeli;
-                // std::cerr << "Elapsed time Likeli: " << elapsed.count() << " ms" << std::endl;
-                // sumLikeli+=elapsed.count();
 
                     corrQuery[qPos] = "ACGT"[newBase];
                 }
@@ -567,81 +466,13 @@ int doCorrection(LocalParameters &par) {
             corrStr.push_back('\n');
             delete[] corrQuery;
 
-
-#ifdef DEBUG_CORR
-        #pragma omp critical
-        {
-            std::string outputLine = std::to_string(queryKey) + "\t";
-
-            std::ostringstream oss;
-            for (unsigned int i = 0; i < totalCov.size(); i++) {
-                oss << totalCov[i];
-                if (i < totalCov.size() - 1) {
-                    oss << " ";
-                }
-            }
-
-            // Append the loop output to outputLine
-            outputLine += oss.str();
-            outputLine += "\n";
-
-            if (outputFileAll.is_open()) {
-                outputFileAll << outputLine;
-            }
-        }
-#endif
-
-            // //if ( queryKey == 1250638 ){
-            // if ( queryKey == 4631784 ){
-            // // //if ( false ){
-            // // //unsigned int max_cov = *std::max_element(totalCov.begin(), totalCov.end());
-            // // //if ( max_cov >= 4 ){
-            // //if ( queryKey == 598571 ){
-            //     std::cerr << ">Original\n" << querySeq;
-            //     std::cerr << ">Corrected\n" << corrStr;
-            //     std::cerr << "TotalCov:\n";
-            //     for (unsigned int i = 0; i < totalCov.size(); i++)
-            //     {
-            //         std::cerr << totalCov[i] << " ";
-            //     }
-            //     std::cerr << "\n";
-
-            //     std::cerr << "QueryCov:\n";
-            //     for (unsigned int i = 0; i < totalCov.size(); i++)
-            //     {
-            //         std::cerr << queryCov[i][0] << " ";
-            //     }
-            //     std::cerr << std::endl;
-            //     for (unsigned int i = 0; i < totalCov.size(); i++)
-            //     {
-            //         std::cerr << queryCov[i][1] << " ";
-            //     }
-            //     std::cerr << std::endl;
-            //     for (unsigned int i = 0; i < totalCov.size(); i++)
-            //     {
-            //         std::cerr << queryCov[i][2] << " ";
-            //     }
-            //     std::cerr << std::endl;
-            //     for (unsigned int i = 0; i < totalCov.size(); i++)
-            //     {
-            //         std::cerr << queryCov[i][3] << " ";
-            //     }
-            //     std::cerr << "\n" << std::endl;
-            // }
-
-
-
-           //resultWriter.writeData(corrQuery, querySeqLen, queryKey, thread_idx, qWasExtended);
+            //resultWriter.writeData(corrQuery, querySeqLen, queryKey, thread_idx, qWasExtended);
             resultWriter.writeData(corrStr.c_str(), corrStr.size(), queryKey, thread_idx, qWasExtended);
             //corrQuery.clear();
             totalCov.clear();
             queryCov.clear();
             deamVec.clear();
 
-            // auto endQuery = std::chrono::high_resolution_clock::now();
-            // std::chrono::duration<double, std::milli> elapsed = endQuery - startQuery;
-            // std::cerr << "Elapsed time Query: " << elapsed.count() << " ms" << std::endl;   
-            // std::cerr << "Elapsed sum time query likeli: " << sumLikeli << " ms" << std::endl;  
         }
     } // end parallel
 

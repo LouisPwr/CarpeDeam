@@ -1,7 +1,6 @@
 #include "nuclassembleUtil.h"
 
 //#define DEBUGEXT
-
 //#define LIKELI
 
 std::vector<unsigned int> getMaxAlnLen(std::vector<Matcher::result_t> &alignments, unsigned int & queryKey)
@@ -133,25 +132,6 @@ int doNuclAssembly1(LocalParameters &par) {
     //unsigned int wasReverse = 0;
     //unsigned int totalQuer = 0;
 
-#ifdef DEBUGEXT
-    auto currentTime = std::chrono::system_clock::now();
-    std::time_t time = std::chrono::system_clock::to_time_t(currentTime);
-    std::stringstream one;
-    one << "likelihood_all_" << time << ".tsv";
-    std::string filenameOne = one.str();
-
-    std::stringstream two;
-    two << "ext_reads_" << time << ".tsv";
-    std::string filenameTwo = two.str();
-
-    std::ofstream outputFileOne;  // Declare the ofstream object globally if possible
-    outputFileOne.open(filenameOne, std::ios::app);  // Open once, append mode
-
-    std::ofstream outputFileTwo;  // Declare the ofstream object globally if possible
-    outputFileTwo.open(filenameTwo, std::ios::app);  // Open once, append mode
-
-#endif
-
 //#pragma omp parallel reduction(+:totalRight,totalLeft,rightExtLongest,leftExtLongest)
 #pragma omp parallel
     {
@@ -248,11 +228,6 @@ int doNuclAssembly1(LocalParameters &par) {
                         alignments[alnIdx].dbStartPos = alignments[alnIdx].dbLen - alignments[alnIdx].dbEndPos - 1;
                         alignments[alnIdx].dbEndPos= alignments[alnIdx].dbLen - dbStartPos - 1;
                         alignments[alnIdx].isRevToAlignment = true;
-                        // #pragma omp atomic
-                        // wasReverse += 1;
-                        // std::cerr << "Query:\t" << querySeq << std::endl;
-                        // char *targetRev = sequenceDbr->getData(sequenceDbr->getId(alignments[alnIdx].dbKey), thread_idx);
-                        // std::cerr << "Target:\t" << targetRev << std::endl;
 
                     } else {
                         useReverse[sequenceDbr->getId(alignments[alnIdx].dbKey)] = false;
@@ -313,15 +288,6 @@ int doNuclAssembly1(LocalParameters &par) {
                 float seqId = static_cast<float>(idCnt) / alignments[idx].alnLength;
                 float rySeqId = static_cast<float>(idRyCnt) / alignments[idx].alnLength;
 
-                    // std::cerr << "alnLen " << alignments[idx].alnLength << std::endl;
-                    // std::cerr << "idRyCnt " << idRyCnt << std::endl;
-                    // std::cerr << "rySeqId " << rySeqId << std::endl;
-                    // std::cerr << "idCnt " << idCnt << std::endl;
-                    // std::cerr << "seqId " << seqId << std::endl;
-                    // std::cerr << "query " << querySeq << std::endl;
-                    // std::cerr << "aln2updateSequ " << aln2updateSequ << std::endl;
-                    // std::cerr << "aln2updateSeq " << aln2updateSeq << std::endl;
-
                 alignments[idx].seqId = seqId;
                 alignments[idx].rySeqId = rySeqId;
             }
@@ -355,10 +321,9 @@ int doNuclAssembly1(LocalParameters &par) {
     
             consensus.assign(3 * querySeqLen, 'N');
             consensusCaller(consensus, notContig, sequenceDbr, querySeq, querySeqLen, queryKey, thread_idx, par, (NucleotideMatrix *) subMat);
-            updateSeqIdConsensusReads(notContig, sequenceDbr, consensus, querySeq, querySeqLen, queryKey, thread_idx, par, (NucleotideMatrix *) subMat, maxAlnLeft, maxAlnRight); 
+            updateSeqIdConsensusReads(notContig, sequenceDbr, consensus, querySeqLen, thread_idx, (NucleotideMatrix *) subMat, maxAlnLeft, maxAlnRight); 
 
             // ONLY DAMAGE AWARE EXTENSION
-
             // std::vector<unsigned int> maxAlign = getMaxAlnLen(notContig, queryKey);
             // unsigned int maxAlnLeft = maxAlign[0];
             // unsigned int maxAlnRight = maxAlign[1];
@@ -389,48 +354,9 @@ int doNuclAssembly1(LocalParameters &par) {
                 const bool isNotIdentity = (notContig[alnIdx].dbKey != queryKey);
                 //const bool notRightStartAndLeftStart = !(notContig[alnIdx].dbStartPos == 0 && notContig[alnIdx].qStartPos == 0 );
 
-
-#ifdef DEBUGEXT
-                    std::string outputLine = std::to_string(queryKey) + "\t" +
-                                                std::to_string(querySeqLen) + "\t" +
-                                                std::to_string(par.likelihoodThreshold) + "\t" +
-                                                std::to_string(notContig[alnIdx].seqId) + "\t" +
-                                                std::to_string(notContig[alnIdx].rySeqId) + "\t" +
-                                                std::to_string(notInside) + "\t" +
-                                                std::to_string(rightStart) + "\t" +
-                                                std::to_string(leftStart) + "\t" +
-                                                std::to_string(isNotIdentity) + "\t" +
-                                                std::to_string(notRightStartAndLeftStart) + "\n";
-
-                        #pragma omp critical
-                        {
-                            if (outputFileOne.is_open()) {
-                                outputFileOne << outputLine;
-                            }
-                        }
-#endif
-
                 if ( (rightStart || leftStart) && notInside && isNotIdentity && notContig[alnIdx].rySeqId >= par.rySeqIdThr && notContig[alnIdx].seqId >= par.seqIdThr)
                 {
-                    // #pragma omp critical
-                    // std::cerr << "Before FIRST" << std::endl;
-                    // #pragma omp critical
-                    // std::cerr << querySeq;
                     scorePerRes toAdd = r_s_pair(notContig[alnIdx], consensus, targetSeq, querySeqLen, subDeamDiNuc, subDeamDiNucRev, maxAlnLeft, maxAlnRight, randAlnPenal, seqErrMatch, par.excessPenal);
-                    // #pragma omp critical
-                    // std::cerr << "After FIRST" << std::endl;
-
-
-#ifdef DEBUGEXT
-                    std::string outputLine = std::to_string(toAdd.sRatio) + "\t" +
-                                                std::to_string(toAdd.sLenNorm) + "\n";
-                    #pragma omp critical
-                    {
-                        if (outputFileOne.is_open()) {
-                            outputFileOne << outputLine;
-                        }
-                    }
-#endif
 
                     if ( toAdd.sRatio > par.likelihoodThreshold ) {
                         alnQueueReads.push( toAdd );
@@ -444,8 +370,6 @@ int doNuclAssembly1(LocalParameters &par) {
 
             std::vector<Matcher::result_t> tmpAlignmentsReads;
             tmpAlignmentsReads.reserve(notContig.size());
-            // Louis was here
-            //unsigned int alignment_counter = 0;
 
             while (!alnQueueReads.empty()) {
 
@@ -506,36 +430,8 @@ int doNuclAssembly1(LocalParameters &par) {
                         else
                            fragment = std::string(targetSeq + dbEndPos + 1, fragLen);
 
-                        // #pragma omp atomic
-                        // totalRight += 1;
-                        // if ( maxAlnRight == besttHitToExtend.alnLength )
-                        // {
-                        //     #pragma omp atomic
-                        //     rightExtLongest += 1;
-                        // }
-                        // std::cerr << query << std::endl;
-                        // std::cerr << besttHitToExtend.seqId << std::endl;
-
                         query += fragment;
                         rightQueryOffset += fragLen;
-
-#ifdef DEBUGEXT
-                    std::string outputLine = std::to_string(queryKey) + "\t" +
-                                                std::to_string(besttHitToExtend.alnLength) + "\t" +
-                                                std::to_string(querySeqLen) + "\t" +
-                                                std::to_string(besttHitToExtend.dbLen) + "\t" +
-                                                std::to_string(besttHitToExtend.seqId) + "\t" +
-                                                std::to_string(besttHitToExtend.rySeqId) + "\t" +
-                                                "1\t" +  // Assuming this is a constant value
-                                                std::to_string(query.length()) + "\t\n";
-
-                        #pragma omp critical
-                        {
-                            if (outputFileTwo.is_open()) {
-                                outputFileTwo << outputLine;
-                            }
-                        }
-#endif
 
                         //update that dbKey was used in assembly
                         __sync_or_and_fetch(&wasExtended[targetId], static_cast<unsigned char>(0x80));
@@ -564,35 +460,9 @@ int doNuclAssembly1(LocalParameters &par) {
                         }
                         else
                             fragment = std::string(targetSeq, fragLen);
-                        
-                        // #pragma omp atomic
-                        // totalLeft += 1;
-                        // if ( maxAlnLeft == besttHitToExtend.alnLength )
-                        // {
-                        //     #pragma omp atomic
-                        //     leftExtLongest += 1;
-                        // }
 
                         query = fragment + query;
                         leftQueryOffset += fragLen;
-
-#ifdef DEBUGEXT
-                    std::string outputLine = std::to_string(queryKey) + "\t" +
-                                                std::to_string(besttHitToExtend.alnLength) + "\t" +
-                                                std::to_string(querySeqLen) + "\t" +
-                                                std::to_string(besttHitToExtend.dbLen) + "\t" +
-                                                std::to_string(besttHitToExtend.seqId) + "\t" +
-                                                std::to_string(besttHitToExtend.rySeqId) + "\t" +
-                                                "0\t" +  // Assuming this is a constant value
-                                                std::to_string(query.length()) + "\t\n";
-
-                        #pragma omp critical
-                        {
-                            if (outputFileTwo.is_open()) {
-                                outputFileTwo << outputLine;
-                            }
-                        }
-#endif
 
                         //update that dbKey was used in assembly
                         __sync_or_and_fetch(&wasExtended[targetId], static_cast<unsigned char>(0x80));
@@ -633,24 +503,14 @@ int doNuclAssembly1(LocalParameters &par) {
 
                     updateNuclAlignment(tmpAlignmentsReads[alnIdx], alignment, querySeq, querySeqLen, tSeq, tSeqLen);
 
-/*                     float ryId = rySeqId(tmpAlignments[alnIdx], querySeq, tSeq, nucleotideMap);
-                    //std::cerr << "ryId " << ryId << std::endl;
-                    tmpAlignments[alnIdx].rySeqId = ryId; */
-
                     if (deleteTargetSeq) {
                         delete[] tSeq;
                     }
                 }
 
-
-                // std::vector<unsigned int> maxAlign = getMaxAlnLen(tmpAlignmentsReads, queryKey);
-                // maxAlnLeft = maxAlign[0];
-                // maxAlnRight = maxAlign[1];
-                // maxAlign.clear();
-
                 std::string consensus(3*querySeqLen, 'N');
                 consensusCaller(consensus, tmpAlignmentsReads, sequenceDbr, querySeq, querySeqLen, queryKey, thread_idx, par, (NucleotideMatrix *) subMat);
-                updateSeqIdConsensusReads(tmpAlignmentsReads, sequenceDbr, consensus, querySeq, querySeqLen, queryKey, thread_idx, par, (NucleotideMatrix *) subMat, maxAlnLeft, maxAlnRight); 
+                updateSeqIdConsensusReads(tmpAlignmentsReads, sequenceDbr, consensus, querySeqLen, thread_idx, (NucleotideMatrix *) subMat, maxAlnLeft, maxAlnRight); 
 
                 for(size_t alnIdx = 0; alnIdx < tmpAlignmentsReads.size(); alnIdx++) {
                     bool notInside = tmpAlignmentsReads[alnIdx].dbLen != tmpAlignmentsReads[alnIdx].alnLength;
@@ -699,12 +559,6 @@ int doNuclAssembly1(LocalParameters &par) {
 
 
 } // end parallel
-
-// std::cerr << "TotalR" << "\t" << totalRight << std::endl;
-// std::cerr << "countR" << "\t" << rightExtLongest << std::endl;
-// std::cerr << "TotalL" << "\t" << totalLeft << std::endl;
-// std::cerr << "countL" << "\t" << leftExtLongest << std::endl;
-// std::cerr << "NumWasReverse\t" << wasReverse << "\tof\t" << totalQuer << std::endl; 
 
 // add sequences that are not yet assembled
 #pragma omp parallel for schedule(dynamic, 10000)

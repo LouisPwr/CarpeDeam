@@ -423,7 +423,7 @@ void calcLikelihoodConsensus(scorePerRes & scoredRes, std::string & consensus, c
 }
 
 
-void updateSeqIdConsensusReads(std::vector<Matcher::result_t> & alignments, DBReader<unsigned int>* sequenceDbr, std::string & consensus, char *querySeq, const unsigned int querySeqLen, unsigned int queryKey, unsigned int thread_idx, LocalParameters &par, NucleotideMatrix *subMat, unsigned int & maxAlnLeft, unsigned int & maxAlnRight){
+void updateSeqIdConsensusReads(std::vector<Matcher::result_t> & alignments, DBReader<unsigned int>* sequenceDbr, std::string & consensus, const unsigned int querySeqLen, unsigned int thread_idx, NucleotideMatrix *subMat, unsigned int & maxAlnLeft, unsigned int & maxAlnRight){
     // update sequence identity
 
     std::unordered_map<char, int> nucleotideMap = {
@@ -758,7 +758,7 @@ void consensusCaller(std::string & consensus, std::vector<Matcher::result_t> & a
     // }
 }
 
-void updateSeqIdConsensus(std::vector<Matcher::result_t> & alignments, DBReader<unsigned int>* sequenceDbr, std::string & consensus, char *querySeq, const unsigned int querySeqLen, unsigned int queryKey, unsigned int thread_idx, LocalParameters &par, NucleotideMatrix *subMat){
+void updateSeqIdConsensus(std::vector<Matcher::result_t> & alignments, DBReader<unsigned int>* sequenceDbr, std::string & consensus, const unsigned int querySeqLen, unsigned int thread_idx, NucleotideMatrix *subMat){
     // update sequence identity
 
     std::unordered_map<char, int> nucleotideMap = {
@@ -1113,7 +1113,7 @@ double deamMatches(Matcher::result_t res, unsigned int scoreAln, double matchLik
 }
 
 
-float ancientMatchCount(Matcher::result_t & res, std::string & consensus, const unsigned int querySeqLen, std::vector<diNucleotideProb> &subDeamDiNuc, DBReader<unsigned int>* sequenceDbr, unsigned int thread_idx, NucleotideMatrix *subMat, char *querySeq, unsigned int & lefts, unsigned int & rights, unsigned int & others){
+float ancientMatchCount(Matcher::result_t & res, std::string & consensus, const unsigned int querySeqLen, std::vector<diNucleotideProb> &subDeamDiNuc, DBReader<unsigned int>* sequenceDbr, unsigned int thread_idx, NucleotideMatrix *subMat, unsigned int & lefts, unsigned int & rights, unsigned int & others){
 
 
     std::unordered_map<char, int> nucleotideMap = {
