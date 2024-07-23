@@ -199,7 +199,7 @@ while [ $STEP -lt $NUM_IT ]; do
 
     done
     STEP="$((STEP-1))"
-    RESULT="${TMP_PATH}/assembly_reads_${STEP}"
+    RESULT="${TMP_PATH}/assembly_contigs_${STEP}"
 
 if [ -n "$PREV_CYCLE_ALL" ]; then
 
