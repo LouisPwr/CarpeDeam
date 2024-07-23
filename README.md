@@ -66,23 +66,18 @@ After compilation, find the PLASS binary in the `build/bin` directory.
 
 
 ## How to assemble
-We recommend merging reads before assembly as merging improves read quality. You need to supply a damage matrix (format see below) to actually make it work.
+We recommend merging reads before assembly as merging improves read quality. You need to supply a damage matrix (format see FAQ) to actually make it work.
 
       # assemble merged reads 
-      carpedeam ancient_assemble examples/reads_1.fastq.gz assembly.fasta tmp --ancient-damage /path/to/damage/prefix
+      carpedeam ancient_assemble examples/reads.fastq.gz assembly.fasta tmp --ancient-damage /path/to/damage/prefix
 
 Important parameters: 
 
-     --ancient-damage         Path to damage matrix. Must be tab separated file (format see below)
+     --ancient-damage         Path to damage matrix. Must be tab separated file (format see FAQ)
      --num-iter-reads-only    Number of iterations which use raw-reads only (=sequences that have not been extended yet); damage aware; results in short (<500bp) but precise contigs; we suggest 3 to 5 iterations
      --num-iterations         Number of total iterations; somewhat damage aware; results in long contigs; we suggest 9 to 12 iterations
      --min-merge-seq-id       Minimum sequence identity threshold of overlapping sequences in contig-merging-step (=after correction). Lower than 99% will result in even longer contigs, but increases the risk of misassemblies
       
-
-
-
-
-
 
 
 
@@ -97,6 +92,7 @@ When compiling from source, PLASS requires `zlib` and `bzip`.
 ## Hardware requirements
 CarpeDeam needs roughly 1 byte of memory per residue to work efficiently. CarpeDeam will scale its memory consumption based on the available main memory of the machine. CarpeDeam needs a CPU with at least the SSE4.1 instruction set to run. 
 
-## FAQ 
-* One
+# FAQ 
+* Which format does the damage matrix need to have?
+  explain
 * Two
