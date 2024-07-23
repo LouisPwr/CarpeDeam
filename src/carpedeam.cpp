@@ -4,7 +4,7 @@
 
 const char* binary_name = "carpedeam";
 const char* tool_name = "CarpeDeam";
-const char* tool_introduction = "ancient nucleotide assembler.";
+const char* tool_introduction = "Ancient Metagenome Assembler.";
 const char* main_author = "Louis Kraft (loipwr3000@gmail.com)";
 const char* show_extended_help = NULL;
 const char* show_bash_info = NULL;
@@ -15,15 +15,15 @@ LocalParameters& localPar = LocalParameters::getLocalInstance();
 std::vector<struct Command> commands = {
         // Plass workflows
         {"ancient_assemble",         guidedNuclAssemble,            &localPar.guidedNuclAssembleworkflow, COMMAND_MAIN,
-                "Assemble nucleotide sequences by iterative greedy overlap assembly using protein and nucleotide information => PenguiN",
+                "Damage aware nucleotide assembly iterative greedy overlap assembly using damage matrix and nucleotide information => CarpeDeam",
                 NULL,
                 "Louis Kraft <lokraf@dtu.dk>",
                 "<i:fast(a|q)File[.gz]> | <i:fastqFile1_1[.gz] <i:fastqFile1_2[.gz] ... <i:fastqFileN_1[.gz] <i:fastqFileN_2[.gz]> <o:fastaFile> <tmpDir>",
                 CITATION_PLASS, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}},
         {"nuclassemble",          nuclassemble,     &localPar.nuclassembleworkflow, COMMAND_MAIN,
-                "Assemble nucleotide sequences by iterative greedy overlap assembly using nucleotide information only (experimental)",
+                "Modified nuclassemble module from PenguiN",
                 NULL,
-                "Louis Kraft <lokraf@dtu.dk>",
+                "Louis Kraft <lokraf@dtu.dk> and Annika Jochheim <annika.jochheim@mpinat.mpg.de>",
                 "<i:fast(a|q)File[.gz]> | <i:fastqFile1_1[.gz] <i:fastqFile1_2[.gz] ... <i:fastqFileN_1[.gz] <i:fastqFileN_2[.gz]> <o:fastaFile> <tmpDir>",
                 CITATION_PLASS, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}},
         // Plass tools

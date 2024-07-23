@@ -46,10 +46,14 @@ int createhdb(int argc, const char **argv, const Command& command) {
      // header format: 'ID len:<len> cycle:<0|1>', later 'ID len:<len> cycle:<0|1> cov:<cov>'
      for (size_t id = 0; id < seqDbr->getSize(); id++) {
 
-        // Louis was here
-         size_t seqKey = seqDbr->getDbKey(id);
+        // // Louis was here
+        //  size_t seqKey = seqDbr->getDbKey(id);
+        //  std::string headerLine =
+        //          std::to_string(seqKey) + HEADER_INTERN_SEP + std::to_string(id) + HEADER_INTERN_SEP + "len:" + std::to_string(seqDbr->getSeqLen(id));
+
          std::string headerLine =
-                 std::to_string(seqKey) + HEADER_INTERN_SEP + std::to_string(id) + HEADER_INTERN_SEP + "len:" + std::to_string(seqDbr->getSeqLen(id));
+                 std::to_string(id) + HEADER_INTERN_SEP + "len:" + std::to_string(seqDbr->getSeqLen(id));
+         size_t seqKey = seqDbr->getDbKey(id);
 
 
          if (cycleDbr != NULL) {

@@ -9,17 +9,17 @@
 
 void setGuidedNuclAssemblerWorkflowDefaults(LocalParameters *p) {
 
-    p->multiNumIterations = MultiParam<int>(5,5);
-    p->multiKmerSize = MultiParam<int>(14,22);
-    p->multiSeqIdThr = MultiParam<float>(0.97,0.99);
+    p->multiNumIterations = MultiParam<int>(1,10);
+    p->multiKmerSize = MultiParam<int>(14,20);
+    p->multiSeqIdThr = MultiParam<float>(0.97,0.9);
     p->alphabetSize = MultiParam<int>(13,5);
 
     p->orfMinLength = 45;
     p->covThr = 0.00;
     p->evalThr = 0.00001;
     p->maskMode = 0;
-    p->kmersPerSequence = 60;
-    p->kmersPerSequenceScale = 0.1;
+    p->kmersPerSequence = 200;
+    p->kmersPerSequenceScale = 0.2;
     p->spacedKmer = false;
     p->ignoreMultiKmer = true;
     p->includeOnlyExtendable = true;
