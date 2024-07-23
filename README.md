@@ -1,64 +1,92 @@
 # CarpeDeam - A metagenomic assembler for heavily damaged ancient datasets
 
-
-CarpeDeam - short description
+CarpeDeam is a damage-aware metagenome assembler for ancient metagenomic DNA datasets. It takes (merged) reads and a damage matrix as input and prooved to work best for heavily damaged datasets.
+CarpeDeam is built upon PenguiN (https://github.com/soedinglab/plass).
 
 [Insert Citation Here](https://www.google.com).
  
-### Install CarpeDeam
-CarpeDeam can be install via [conda](https://github.com/conda/conda) or as statically compiled Linux version. CarpeDeam requires a 64-bit Linux/MacOS system (check with `uname -a | grep x86_64`) with at least the SSE2 instruction set.
+# Install CarpeDeam
 
-     # install from bioconda
-     conda install -c conda-forge -c bioconda carpedeam 
+CarpeDeam can be install via [conda](https://github.com/conda/conda) or as statically compiled Linux version.
 
-     provide static builds!!!
-     # static build with AVX2 (fastest)
-     wget https://mmseqs.com/plass/plass-linux-avx2.tar.gz; tar xvfz plass-linux-avx2.tar.gz; export PATH=$(pwd)/plass/bin/:$PATH
-     # static build with SSE4.1
-     wget https://mmseqs.com/plass/plass-linux-sse41.tar.gz; tar xvfz plass-linux-sse41.tar.gz; export PATH=$(pwd)/plass/bin/:$PATH
-     # static build with SSE2 (slowest, for very old systems)
-     wget https://mmseqs.com/plass/plass-linux-sse2.tar.gz; tar xvfz plass-linux-sse2.tar.gz; export PATH=$(pwd)/plass/bin/:$PATH
- 
+## Option 1 (easy): Static Binary
 
-## How to assemble
-Plass can assemble both paired-end reads (FASTQ) and single reads (FASTA or FASTQ):
+Step 1: Download the static binary. The list of releases is here: https://github.com/LouisPwr/CarpeDeam/tags Each release comes with a static binary. Find the URL of the static binary by right-clicking and selecting "copy link"
 
-      # assemble paired-end reads 
-      plass assemble examples/reads_1.fastq.gz examples/reads_2.fastq.gz assembly.fas tmp
+```
+wget [URL TO RELEASE BINARY]
+```
 
-      # assemble single-end reads 
-      plass assemble examples/reads_1.fastq.gz assembly.fas tmp
+Where you paste the URL of the binary. If you have root access, simply install the executable by running
 
-      # assemble single-end reads using stdin
-      cat examples/reads_1.fastq.gz | plass assemble stdin assembly.fas tmp
+```
+sudo cp CarpeDeam /usr/bin
+```
 
+Otherwise, just leave the executable where it is or copy it in a bin/ directory in your home directory:
 
-Important parameters: 
+```
+mkdir -P $HOME/bin/
+cp CarpeDeam $HOME/bin/
+```
 
-     --min-seq-id         Adjusts the overlap sequence identity threshold
-     --min-length         minimum codon length for ORF prediction (default: 40)
-     -e                   E-value threshold for overlaps 
-     --num-iterations     Number of iterations of assembly
-     --filter-proteins    Switches the neural network protein filter off/on
+Step 2: Mark the binary executable:
 
-Modules: 
+```
+chmod +x CarpeDeam
+```
 
-      plass assemble      Assembles proteins (i:Nucleotides -> o:Proteins)
-      plass nuclassemble  Assembles nucleotides *experimental* (i:Nucleotides -> o:Nucleotides)
-      
+## Option 2 (easy): Conda
 
+Install Conda (https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) and Bioconda (https://bioconda.github.io/) and type the following:
 
-### Compile from source
-Compiling CarpeDeam from source has the advantage that it will be optimized to the specific system, which should improve its performance. To compile PLASS `git`, `g++` (4.6 or higher) and `cmake` (3.0 or higher) are required. Afterwards, the PLASS binary will be located in the `build/bin` directory.
+```
+ conda  install -c bioconda carpedeam
+```
+
+## Option 3 (cool): Compile from source
+
+Compiling CarpeDeam from source optimizes it for your specific system, potentially boosting performance. 
+
+Prerequisites:
+- Git
+- G++ (version 4.6 or higher)
+- CMake (version 3.0 or higher)
+
+After compilation, find the PLASS binary in the `build/bin` directory.
+
 
       git clone https://github.com/LouisPwr/CarpeDeam
-      cd plass
+      cd CarpeDeam
       git submodule update --init
       mkdir build && cd build
       cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=. ..
       make -j 4 && make install
       export PATH="$(pwd)/bin/:$PATH"
-        
+
+
+## How to assemble
+We recommend merging reads before assembly as merging improves read quality. You need to supply a damage matrix (format see below) to actually make it work.
+
+      # assemble merged reads 
+      carpedeam ancient_assemble examples/reads_1.fastq.gz assembly.fasta tmp --ancient-damage /path/to/damage/prefix
+
+Important parameters: 
+
+     --ancient-damage         Path to damage matrix. Must be tab separated file (format see below)
+     --num-iter-reads-only    Number of iterations which use raw-reads only (=sequences that have not been extended yet); damage aware; results in short (<500bp) but precise contigs; we suggest 3 to 5 iterations
+     --num-iterations         Number of total iterations; somewhat damage aware; results in long contigs; we suggest 9 to 12 iterations
+     --min-merge-seq-id       Minimum sequence identity threshold of overlapping sequences in contig-merging-step (=after correction). Lower than 99% will result in even longer contigs, but increases the risk of misassemblies
+      
+
+
+
+
+
+
+
+
+
 
 #### Dependencies
 
