@@ -17,7 +17,7 @@ void setNuclAssemblerWorkflowDefaults(LocalParameters *p) {
     p->alphabetSize = 5;
 
     p->covThr = 0.0;
-    p->evalThr = 0.00001;
+    p->evalThr = 0.001;
     p->maskMode = 0;
     p->kmersPerSequence = 200;
     p->kmersPerSequenceScale = 0.2;
@@ -27,7 +27,7 @@ void setNuclAssemblerWorkflowDefaults(LocalParameters *p) {
     p->addBacktrace = false;
     p->rescoreMode = Parameters::RESCORE_MODE_END_TO_END_ALIGNMENT;
     p->alignmentMode = Parameters::ALIGNMENT_MODE_SCORE_COV;
-    p->maxSeqLen = 200000;
+    p->maxSeqLen = 300000;
     p->cycleCheck = true;
     p->chopCycle = true;
 

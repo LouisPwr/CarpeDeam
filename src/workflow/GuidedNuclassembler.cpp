@@ -16,7 +16,7 @@ void setGuidedNuclAssemblerWorkflowDefaults(LocalParameters *p) {
 
     p->orfMinLength = 45;
     p->covThr = 0.00;
-    p->evalThr = 0.00001;
+    p->evalThr = 0.001;
     p->maskMode = 0;
     p->kmersPerSequence = 200;
     p->kmersPerSequenceScale = 0.2;
