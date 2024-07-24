@@ -169,7 +169,7 @@ void calcLikelihood(scorePerRes & scoredRes, char* querySeq, const char* targetS
 
 
     // likelihood w/o penalty
-    double likAlnLen = likMod;
+    // double likAlnLen = likMod;
 
     // Penalizing short alignments
     unsigned int excess = maxAln - scoredRes.r.alnLength;
