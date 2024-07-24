@@ -95,6 +95,7 @@ CarpeDeam needs roughly 1 byte of memory per residue to work efficiently. CarpeD
 # FAQ 
 * Which format does the damage matrix need to have? (Template see example dir in this repository)
   It must be a tab seperated file with a header line for the individual substitutions and one line per position. The C-to-T substitutions start at position 1 of the five-prime-end, the G-to-A substitutions start at position 1 of the three-prime-end.
+  
   **Important: The damage matrices need to have the suffix 3p.prof and 5p.prof**
   
   myDamage_5p.prof could look like:
@@ -120,14 +121,10 @@ CarpeDeam needs roughly 1 byte of memory per residue to work efficiently. CarpeD
   No, but focusing on C-to-T and G-to-A substitutions is generally the best approach:
   
   Typical ancient DNA damage:
-  
   C-to-T and G-to-A are the most common substitutions in ancient DNA. These are primarily caused by chemical processes over time, not evolution.
   
   Other substitution types:
-  
   Non-zero rates for other substitutions usually indicate evolutionary changes or sequencing errors (among others). Including these could increase the risk of assembly errors.
-  
-  Assembly accuracy:
   
   Focusing on C-to-T and G-to-A helps avoid incorrect "corrections" and ensures more accurate species-specific assembly.
   
