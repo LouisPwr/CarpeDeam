@@ -93,7 +93,8 @@ When compiling from source, PLASS requires `zlib` and `bzip`.
 CarpeDeam needs roughly 1 byte of memory per residue to work efficiently. CarpeDeam will scale its memory consumption based on the available main memory of the machine. CarpeDeam needs a CPU with at least the SSE4.1 instruction set to run. 
 
 # FAQ 
-* Which format does the damage matrix need to have? (Template see example dir in this repository)
+* **Which format does the damage matrix need to have?** (Template see example dir in this repository)
+  
   It must be a tab seperated file with a header line for the individual substitutions and one line per position. The C-to-T substitutions start at position 1 of the five-prime-end, the G-to-A substitutions start at position 1 of the three-prime-end.
   
   **Important: The damage matrices need to have the suffix 3p.prof and 5p.prof**
@@ -116,7 +117,7 @@ CarpeDeam needs roughly 1 byte of memory per residue to work efficiently. CarpeD
       0       0       0       0       0       0       0.164419        0       0       0       0       0
       0       0       0       0       0       0       0.146352        0       0       0       0       0
 
-* Do all other substitution rates have to be 0?
+* **Do all other substitution rates have to be 0?**
   
   No, but focusing on C-to-T and G-to-A substitutions is generally the best approach:
   
@@ -128,7 +129,7 @@ CarpeDeam needs roughly 1 byte of memory per residue to work efficiently. CarpeD
   
   Focusing on C-to-T and G-to-A helps avoid incorrect "corrections" and ensures more accurate species-specific assembly.
   
-* How do I correctly porvide the damage matrix file path?
+* **How do I correctly porvide the damage matrix file path?**
   Assume our damage matrices are located at:
 
       /path/to/emotional/damage/sampleDamage_3p.prof
