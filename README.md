@@ -93,6 +93,36 @@ When compiling from source, PLASS requires `zlib` and `bzip`.
 CarpeDeam needs roughly 1 byte of memory per residue to work efficiently. CarpeDeam will scale its memory consumption based on the available main memory of the machine. CarpeDeam needs a CPU with at least the SSE4.1 instruction set to run. 
 
 # FAQ 
-* Which format does the damage matrix need to have?
-  explain
-* Two
+* Which format does the damage matrix need to have? (Template see example dir in this repository)
+  It must be a tab seperated file with a header line for the individual substitutions and one line per position. The C-to-T substitutions start at position 1 of the five-prime-end, the G-to-A substitutions start at position 1 of the three-prime-end.
+  **Important: The damage matrices need to have the suffix 3p.prof and 5p.prof**
+  
+  myDamage_5p.prof could look like:
+  
+      A>C     A>G     A>T     C>A     C>G     C>T     G>A     G>C     G>T     T>A     T>C     T>G
+      0       0       0       0       0       0.329405        0       0       0       0       0       0
+      0       0       0       0       0       0.221745        0       0       0       0       0       0
+      0       0       0       0       0       0.187678        0       0       0       0       0       0
+      0       0       0       0       0       0.161196        0       0       0       0       0       0
+      0       0       0       0       0       0.144011        0       0       0       0       0       0
+  
+   myDamage_3p.prof could look like:
+  
+       A>C     A>G     A>T     C>A     C>G     C>T     G>A     G>C     G>T     T>A     T>C     T>G
+      0       0       0       0       0       0       0.32891 0       0       0       0       0
+      0       0       0       0       0       0       0.223405        0       0       0       0       0
+      0       0       0       0       0       0       0.188599        0       0       0       0       0
+      0       0       0       0       0       0       0.164419        0       0       0       0       0
+      0       0       0       0       0       0       0.146352        0       0       0       0       0
+
+* How do I correctly porvide the damage matrix file path?
+  Assume our damage matrices are located at:
+
+      /path/to/damage/myDamage_3p.prof
+      /path/to/damage/myDamage_5p.prof
+
+  The yoiu can call CarpeDeam as follows:
+
+      carpedeam ancient_assemble myInput.fasta myOutput.fasta tmpDir --ancient-damage /path/to/damage/myDamage_
+
+
