@@ -118,11 +118,17 @@ CarpeDeam needs roughly 1 byte of memory per residue to work efficiently. CarpeD
 * Do all other substitution rates have to be 0?
   
   No, but focusing on C-to-T and G-to-A substitutions is generally the best approach:
+  
   Typical ancient DNA damage:
+  
   C-to-T and G-to-A are the most common substitutions in ancient DNA. These are primarily caused by chemical processes over time, not evolution.
+  
   Other substitution types:
+  
   Non-zero rates for other substitutions usually indicate evolutionary changes or sequencing errors (among others). Including these could increase the risk of assembly errors.
+  
   Assembly accuracy:
+  
   Focusing on C-to-T and G-to-A helps avoid incorrect "corrections" and ensures more accurate species-specific assembly.
   
 * How do I correctly porvide the damage matrix file path?
