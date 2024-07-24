@@ -121,7 +121,7 @@ CarpeDeam needs roughly 1 byte of memory per residue to work efficiently. CarpeD
       /path/to/damage/myDamage_3p.prof
       /path/to/damage/myDamage_5p.prof
 
-  The yoiu can call CarpeDeam as follows:
+  The you can call CarpeDeam as follows:
 
       carpedeam ancient_assemble myInput.fasta myOutput.fasta tmpDir --ancient-damage /path/to/damage/myDamage_
 
