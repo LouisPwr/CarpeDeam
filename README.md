@@ -1,3 +1,5 @@
+[![BioConda Install](https://anaconda.org/bioconda/carpedeam/badges/downloads.svg)](https://anaconda.org/bioconda/carpedeam)
+
 # CarpeDeam - A metagenomic assembler for heavily damaged ancient datasets
 
 CarpeDeam is a damage-aware metagenome assembler for ancient metagenomic DNA datasets. It takes (merged) reads and a damage matrix as input and prooved to work best for heavily damaged datasets.
