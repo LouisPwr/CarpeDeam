@@ -19,7 +19,7 @@ std::vector<struct Command> commands = {
                 NULL,
                 "Louis Kraft <lokraf@dtu.dk>",
                 "<i:fast(a|q)File[.gz]> | <i:fastqFile1_1[.gz] <i:fastqFile1_2[.gz] ... <i:fastqFileN_1[.gz] <i:fastqFileN_2[.gz]> <o:fastaFile> <tmpDir>",
-                CITATION_CARPEDEAM, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}},
+                "Kraft L et al.: A De Novo Metagenome Assembler for Heavily Damaged Ancient Datasets (published soon)", {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}},
         {"nuclassemble",          nuclassemble,     &localPar.nuclassembleworkflow, COMMAND_MAIN,
                 "Modified nuclassemble module from PenguiN",
                 NULL,
