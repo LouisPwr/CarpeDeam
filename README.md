@@ -1,3 +1,4 @@
+[![Anaconda](https://anaconda.org/bioconda/carpedeam/badges/version.svg)](https://anaconda.org/bioconda/carpedeam)             
 [![BioConda Install](https://anaconda.org/bioconda/carpedeam/badges/downloads.svg)](https://anaconda.org/bioconda/carpedeam)
 
 # CarpeDeam - A metagenomic assembler for heavily damaged ancient datasets
