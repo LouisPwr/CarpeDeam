@@ -80,6 +80,7 @@ Important parameters:
      --num-iter-reads-only    Number of iterations which use raw-reads only (=sequences that have not been extended yet); damage aware; results in short (<500bp) but precise contigs; we suggest 3 to 5 iterations
      --num-iterations         Number of total iterations; somewhat damage aware; results in long contigs; we suggest 9 to 12 iterations
      --min-merge-seq-id       Minimum sequence identity threshold of overlapping sequences in contig-merging-step (=after correction). Lower than 99% will result in even longer contigs, but increases the risk of misassemblies
+     --unsafe                 Turn On  to maximize contig lengths and sensitivity. Comes with a higher risk of assembling chimeric contigs. 
       
 
 
