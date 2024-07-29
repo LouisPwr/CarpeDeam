@@ -9,7 +9,7 @@ CarpeDeam is built upon PenguiN (https://github.com/soedinglab/plass).
  
 # Install CarpeDeam
 
-CarpeDeam can be install via [conda](https://github.com/conda/conda) or as statically compiled Linux version.
+CarpeDeam can be installed via [conda](https://github.com/conda/conda), as statically compiled Linux version or by compiling the program from source.
 
 ## Option 1 (easy): Static Binary
 
