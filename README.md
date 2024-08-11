@@ -43,7 +43,7 @@ chmod +x CarpeDeam
 Install Conda (https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) and Bioconda (https://bioconda.github.io/) and type the following:
 
 ```
- conda  install -c bioconda carpedeam
+ conda install -c bioconda carpedeam
 ```
 Thanks to martin-g for the bioconda support!
 
