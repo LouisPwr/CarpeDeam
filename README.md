@@ -5,7 +5,7 @@
 CarpeDeam is a damage-aware metagenome assembler for ancient metagenomic DNA datasets. It takes (merged) reads and a damage matrix as input and prooved to work best for heavily damaged datasets.
 CarpeDeam is built upon PenguiN (https://github.com/soedinglab/plass).
 
-[Kraft, L., Soeding, J., Steinegger, M., Jochheim, A., Fernandez-Guerra, A., & Renaud, G. (2024). CarpeDeam: A De Novo Metagenome Assembler for Heavily Damaged Ancient Datasets. Cold Spring Harbor Laboratory.](https://doi.org/10.1101/2024.08.09.607291).
+[Kraft, L., Soeding, J., Steinegger, M., Jochheim, A., Fernandez-Guerra, A., & Renaud, G. (2024). CarpeDeam: A De Novo Metagenome Assembler for Heavily Damaged Ancient Datasets. Cold Spring Harbor Laboratory.](https://doi.org/10.1101/2024.08.09.607291)
  
 # Install CarpeDeam
 
