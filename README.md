@@ -80,9 +80,11 @@ Refresh your "~/.bashrc":
 
       source ~/.bashrc
 
-#### Dependencies
+
+### Dependencies
 
 When compiling from source, CarpeDeam requires `zlib` and `bzip`.
+
 
 ### Hardware requirements
 
