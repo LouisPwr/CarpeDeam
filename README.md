@@ -80,6 +80,15 @@ Refresh your "~/.bashrc":
 
       source ~/.bashrc
 
+#### Dependencies
+
+When compiling from source, CarpeDeam requires `zlib` and `bzip`.
+
+### Hardware requirements
+
+CarpeDeam needs roughly 1 byte of memory per residue to work efficiently. CarpeDeam will scale its memory consumption based on the available main memory of the machine. CarpeDeam needs a CPU with at least the SSE4.1 instruction set to run. 
+
+
 
 ## How to assemble
 We recommend merging reads before assembly as merging improves read quality. You need to supply a damage matrix (format see FAQ) to actually make it work.
@@ -97,17 +106,6 @@ Important parameters:
       
 
 
-
-
-
-#### Dependencies
-
-When compiling from source, CarpeDeam requires `zlib` and `bzip`.
-
-### Use the docker image
-
-## Hardware requirements
-CarpeDeam needs roughly 1 byte of memory per residue to work efficiently. CarpeDeam will scale its memory consumption based on the available main memory of the machine. CarpeDeam needs a CPU with at least the SSE4.1 instruction set to run. 
 
 # FAQ 
 * **Which format does the damage matrix need to have?** (Template see example dir in this repository)
