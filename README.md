@@ -17,25 +17,28 @@ Step 1: Download the static binary. The list of releases is here: https://github
 
 ```
 wget [URL TO RELEASE BINARY]
+
+# unpack it
+tar -xvzf carpedeam-static.tar.gz
 ```
 
 Where you paste the URL of the binary. If you have root access, simply install the executable by running
 
 ```
-sudo cp CarpeDeam /usr/bin
+sudo cp carpedeam /usr/bin
 ```
 
 Otherwise, just leave the executable where it is or copy it in a bin/ directory in your home directory:
 
 ```
 mkdir -P $HOME/bin/
-cp CarpeDeam $HOME/bin/
+cp carpedeam $HOME/bin/
 ```
 
 Step 2: Mark the binary executable:
 
 ```
-chmod +x CarpeDeam
+chmod +x carpedeam
 ```
 
 ## Option 2 (easy): Conda
