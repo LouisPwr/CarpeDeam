@@ -18,7 +18,7 @@ Step 1: Download the static binary. The list of releases is here: https://github
 ```
 wget [URL TO RELEASE BINARY]
 
-# unpack it
+# unpack the binary
 tar -xvzf carpedeam-static.tar.gz
 ```
 
@@ -69,6 +69,15 @@ After compilation, find the PLASS binary in the `build/bin` directory.
       cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=. ..
       make -j 4 && make install
       export PATH="$(pwd)/bin/:$PATH"
+
+If you want the program to be permanently available, you can the **full path to the carpedeam binary** to your ".bashrc" file. Don't forget to "source" it afterwards.
+Open your "~/.bashrc" and add anywhere:
+
+      export PATH="/home/path/to/carpedeam/build/bin:$PATH"
+
+Refresh your "~/.bashrc":
+
+      source ~/.bashrc
 
 
 ## How to assemble
