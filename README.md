@@ -72,7 +72,7 @@ After compilation, find the carpedeam binary in the `build/bin` directory.
       make -j 4 && make install
       export PATH="$(pwd)/bin/:$PATH"
 
-If you want the program to be permanently available, you can add the **full path to the CarpeDeam** binary to your .bashrc file. Don't forget to source it afterward. Open your ~/.bashrc and add the following line anywhere:
+If you want the program to be permanently available, you can add the **full path to the carpedeam** binary to your .bashrc file. Don't forget to source it afterward. Open your ~/.bashrc and add the following line anywhere:
 
       export PATH="/home/path/to/carpedeam/build/bin:$PATH"
 
