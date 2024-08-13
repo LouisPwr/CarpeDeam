@@ -59,7 +59,7 @@ Prerequisites:
 - G++ (version 4.6 or higher)
 - CMake (version 3.0 or higher)
 
-After compilation, find the PLASS binary in the `build/bin` directory.
+After compilation, find the carpedeam binary in the `build/bin` directory.
 
 
       git clone https://github.com/LouisPwr/CarpeDeam
@@ -101,7 +101,7 @@ Important parameters:
 
 #### Dependencies
 
-When compiling from source, PLASS requires `zlib` and `bzip`.
+When compiling from source, CarpeDeam requires `zlib` and `bzip`.
 
 ### Use the docker image
 
