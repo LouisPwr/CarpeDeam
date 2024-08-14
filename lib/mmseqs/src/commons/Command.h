@@ -8,8 +8,9 @@ const unsigned int CITATION_MMSEQS1  = 1U << 1;
 const unsigned int CITATION_UNICLUST = 1U << 2;
 const unsigned int CITATION_LINCLUST = 1U << 3;
 const unsigned int CITATION_PLASS    = 1U << 4;
-const unsigned int CITATION_SERVER   = 1U << 5;
-const unsigned int CITATION_TAXONOMY = 1U << 6;
+const unsigned int CITATION_CARPEDEAM    = 1U << 5;
+const unsigned int CITATION_SERVER   = 1U << 6;
+const unsigned int CITATION_TAXONOMY = 1U << 7;
 
 // Make sure this is always the last bit
 // citations from inheriting modules will start from here

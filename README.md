@@ -7,7 +7,7 @@ CarpeDeam is built upon PenguiN (https://github.com/soedinglab/plass).
 
 Cite CarpeDeam:
 
-[Kraft, L., Soeding, J., Steinegger, M., Jochheim, A., Fernandez-Guerra, A., & Renaud, G. (2024). CarpeDeam: A De Novo Metagenome Assembler for Heavily Damaged Ancient Datasets. Cold Spring Harbor Laboratory.](https://www.biorxiv.org/content/10.1101/2024.08.09.607291v1)
+[Kraft, L., Söding, J., Steinegger, M., Jochheim, A., Sackett, P. W., Fernandez-Guerra, A., & Renaud, G. (2024). CarpeDeam: A De Novo Metagenome Assembler for Heavily Damaged Ancient Datasets. Cold Spring Harbor Laboratory.](https://www.biorxiv.org/content/10.1101/2024.08.09.607291v1)
  
 # Install CarpeDeam
 
