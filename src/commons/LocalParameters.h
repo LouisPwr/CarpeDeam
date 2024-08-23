@@ -64,6 +64,7 @@ public:
     int ancientkmersPerSequence;
     bool ancientUnsafe;
     float rySeqIdThr;
+    int minCovSafe;
 
     MultiParam<int> multiNumIterations;
     MultiParam<int> multiKmerSize;
@@ -102,6 +103,7 @@ public:
     PARAMETER(PARAM_ANCIENT_KMER_PER_SEQ)
     PARAMETER(PARAM_ANCIENT_MIN_RYSEQ_ID)
     PARAMETER(PARAM_ANCIENT_UNSAFE)
+    PARAMETER(PARAM_ANCIENT_MINCOV_SAFE)
 
 
     // contig output
@@ -145,7 +147,8 @@ private:
             PARAM_ANCIENT_KMER_PER_SEQ_SCALE(PARAM_ANCIENT_KMER_PER_SEQ_SCALE_ID, "--kmer-per-seq-scale-ancient", "Scale k-mers per sequence (ancient)", "Scale k-mer per sequence based on sequence length as kmer-per-seq val + scale x seqlen (ancient)", typeid(MultiParam<float>), (void *) &kmersPerSequenceScale, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_EXPERT),
             PARAM_ANCIENT_KMER_PER_SEQ(PARAM_ANCIENT_KMER_PER_SEQ_ID, "--kmer-per-seq-ancient", "k-mers per sequence (ancient)", "k-mers per sequence (ancient)", typeid(int), (void *) &kmersPerSequence, "^[1-9]{1}[0-9]*$", MMseqsParameter::COMMAND_EXPERT),
             PARAM_ANCIENT_MIN_RYSEQ_ID(PARAM_ANCIENT_MIN_RYSEQ_ID_ID, "--min-ryseq-id", "RY-Seq. id. threshold (ancient)", "List matches above this sequence identity in RY-mer space (ancient) (range 0.0-1.0)", typeid(float), (void *) &rySeqIdThr, "^0(\\.[0-9]+)?|1(\\.0+)?$", MMseqsParameter::COMMAND_EXPERT),
-            PARAM_ANCIENT_UNSAFE(PARAM_ANCIENT_UNSAFE_ID, "--unsafe", "Maximize contig length (safe vs. unsafe mode)", "Maximize the contig length, but higher misassembly rate (ancient) ", typeid(bool), (void *) &ancientUnsafe, "", MMseqsParameter::COMMAND_EXPERT)
+            PARAM_ANCIENT_UNSAFE(PARAM_ANCIENT_UNSAFE_ID, "--unsafe", "Maximize contig length (safe vs. unsafe mode)", "Maximize the contig length, but higher misassembly rate (ancient) ", typeid(bool), (void *) &ancientUnsafe, "", MMseqsParameter::COMMAND_EXPERT),
+            PARAM_ANCIENT_MINCOV_SAFE(PARAM_ANCIENT_MINCOV_SAFE_ID, "--min-cov-safe", "Minimum coverage of extending region (ancient)", "Minimum coverage of extending region (ancient)", typeid(int), (void *) &minCovSafe, "^[1-9]{1}[0-9]*$", MMseqsParameter::COMMAND_EXPERT)
             {
 
         // assembleresult
@@ -165,6 +168,7 @@ private:
         assembleresults.push_back(&PARAM_CORR_CONTIG_MIN_SEQ_ID);
         assembleresults.push_back(&PARAM_DAMAGE_PATH);
         assembleresults.push_back(&PARAM_ANCIENT_UNSAFE);
+        assembleresults.push_back(&PARAM_ANCIENT_MINCOV_SAFE);
 
 
         extractorfssubset.push_back(&PARAM_TRANSLATION_TABLE);
@@ -306,6 +310,7 @@ private:
         ancientKmersPerSequenceScale = 0.2;
         ancientkmersPerSequence = 200;
         ancientUnsafe = false;
+        minCovSafe = 5;
 
         multiNumIterations = MultiParam<int>(12, 1);
         multiKmerSize = MultiParam<int>(14, 20);
