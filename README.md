@@ -111,6 +111,7 @@ Important parameters:
 
 # FAQ 
 * **Why does my run fail in the correction step?**
+  
  The tool is currently very strict about the input format of damage matrices. Please ensure that the files are tab-separated and do not contain trailing whitespaces or tabs at the end of lines. We plan to integrate this check and formatting step directly into the tool in the future, so this issue should occur less frequently - or not at all.
 
 You can fix this automatically by running the following command on your damage profile files:
