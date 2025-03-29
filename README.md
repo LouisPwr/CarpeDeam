@@ -110,6 +110,21 @@ Important parameters:
 
 
 # FAQ 
+* **Why does my run fail in the correction step?**
+ The tool is currently very strict about the input format of damage matrices. Please ensure that the files are tab-separated and do not contain trailing whitespaces or tabs at the end of lines. We plan to integrate this check and formatting step directly into the tool in the future, so this issue should occur less frequently - or not at all.
+
+You can fix this automatically by running the following command on your damage profile files:
+
+Error message you would see:
+
+    Do correction.
+    Profile not 12 fields uniq1
+    Error: ancient_correction died
+
+Fix with:
+
+    sed -E 's/[[:space:]]+/\t/g; s/\t$//' your_damage_3p.prof > your_fixed_damage_3p.prof
+
 * **Which format does the damage matrix need to have?** (Template see example dir in this repository)
   
   It must be a tab seperated file with a header line for the individual substitutions and one line per position. The C-to-T substitutions start at position 1 of the five-prime-end, the G-to-A substitutions start at position 1 of the three-prime-end.
