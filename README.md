@@ -126,6 +126,12 @@ Important parameters:
 
       sed -E 's/[[:space:]]+/\t/g; s/\t$//' your_damage_3p.prof > your_fixed_damage_3p.prof
 
+* **Problem: I get a segmentation fault in the correction step**
+
+  Solution: Be sure to filter the reads by length before you are assembling. Reads that are only 1bp long will break the tool. E.g. to fitler out any reads shorter than 20bp you can use the tool [seqkit](https://github.com/shenwei356/seqkit):
+
+      seqkit seq -m 20 input.fasta > output.fasta
+
 * **Which format does the damage matrix need to have?** (Template see example dir in this repository)
   
    It must be a tab seperated file with a header line for the individual substitutions and one line per position. The C-to-T substitutions start at position 1 of the five-prime-end, the G-to-A substitutions start at position 1 of the three-prime-end.
